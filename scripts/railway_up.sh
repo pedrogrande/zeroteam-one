@@ -33,7 +33,16 @@ cat << 'BANNER'
 BANNER
 echo -e "${NC}"
 
-# Load .env if it exists
+# Load config
+if [[ -f railway.config ]]; then
+    source railway.config
+    echo -e "${DIM}Config: PROJECT_NAME=$PROJECT_NAME, SERVICE_NAME=$SERVICE_NAME${NC}"
+else
+    echo "Missing railway.config. Run from project root."
+    exit 1
+fi
+
+# Load .env for secrets
 if [[ -f .env ]]; then
     set -a
     source .env
@@ -43,7 +52,7 @@ fi
 
 # Preflight
 if ! command -v railway &> /dev/null; then
-    echo "Railway CLI not found. Install: https://docs.railway.app/guides/cli"
+    echo "Railway CLI not found. Install: https://docs.railway.com/guides/cli"
     exit 1
 fi
 
@@ -52,23 +61,24 @@ if [[ -z "$OPENAI_API_KEY" ]]; then
     exit 1
 fi
 
-echo -e "${BOLD}Initializing project...${NC}"
 echo ""
-railway init -n "agent-os"
+echo -e "${BOLD}Creating project '${PROJECT_NAME}'...${NC}"
+echo ""
+railway init -n "$PROJECT_NAME"
 
 echo ""
-echo -e "${BOLD}Deploying PgVector database...${NC}"
+echo -e "${BOLD}Provisioning PgVector database...${NC}"
 echo ""
-railway deploy -t 3jJFCA
+railway deploy -t "$DB_TEMPLATE_ID"
 
 echo ""
-echo -e "${DIM}Waiting 10s for database...${NC}"
-sleep 10
+echo -e "${DIM}Waiting ${DB_WAIT_TIME}s for database...${NC}"
+sleep "$DB_WAIT_TIME"
 
 echo ""
-echo -e "${BOLD}Creating application service...${NC}"
+echo -e "${BOLD}Creating service '${SERVICE_NAME}'...${NC}"
 echo ""
-railway add --service agent-os \
+railway add --service "$SERVICE_NAME" \
     --variables 'DB_USER=${{pgvector.PGUSER}}' \
     --variables 'DB_PASS=${{pgvector.PGPASSWORD}}' \
     --variables 'DB_HOST=${{pgvector.PGHOST}}' \
@@ -77,19 +87,19 @@ railway add --service agent-os \
     --variables "DB_DRIVER=postgresql+psycopg" \
     --variables "WAIT_FOR_DB=True" \
     --variables "OPENAI_API_KEY=${OPENAI_API_KEY}" \
-    --variables "PORT=8000"
+    --variables "PORT=${PORT}"
 
 echo ""
-echo -e "${BOLD}Deploying application...${NC}"
+echo -e "${BOLD}Deploying ${SERVICE_NAME}...${NC}"
 echo ""
-railway up --service agent-os -d
+railway up --service "$SERVICE_NAME" -d
 
 echo ""
 echo -e "${BOLD}Creating domain...${NC}"
 echo ""
-railway domain --service agent-os
+railway domain --service "$SERVICE_NAME"
 
 echo ""
 echo -e "${BOLD}Done.${NC} Domain may take ~5 minutes."
-echo -e "${DIM}Logs: railway logs --service agent-os${NC}"
+echo -e "${DIM}Logs: railway logs --service ${SERVICE_NAME}${NC}"
 echo ""

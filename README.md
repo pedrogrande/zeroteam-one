@@ -1,5 +1,7 @@
 # AgentOS Railway Template
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/agentos)
+
 Deploy a multi-agent system on Railway.
 
 ## What's Included
@@ -37,17 +39,22 @@ Confirm AgentOS is running at [http://localhost:8000/docs](http://localhost:8000
 
 ## Deploy to Railway
 
-Requires:
-- [Railway CLI](https://docs.railway.com/guides/cli)
-- `OPENAI_API_KEY` set in your environment
+### One-Click Deploy
+
+Click the deploy button at the top of this page, or go to [railway.com/new/template/agentos](https://railway.com/new/template/agentos).
+
+You'll need to provide your `OPENAI_API_KEY`. The template automatically provisions PostgreSQL with pgvector.
+
+### CLI Deploy (Advanced)
+
+For more control, use the Railway CLI:
 
 ```sh
 railway login
-
 ./scripts/railway_up.sh
 ```
 
-The script provisions PostgreSQL, configures environment variables, and deploys your application.
+This provisions the database, configures environment variables, and deploys your application.
 
 ### Connect to the Web UI
 
@@ -57,15 +64,17 @@ The script provisions PostgreSQL, configures environment variables, and deploys 
 
 ### Manage deployment
 
+Use the `SERVICE_NAME` from your `railway.config`.
+
 ```sh
-railway logs --service agent-os      # View logs
-railway open                         # Open dashboard
-railway up --service agent-os -d     # Update after changes
+railway logs --service <SERVICE_NAME>  # View logs
+railway open                           # Open dashboard
+./scripts/railway_redeploy.sh          # Re-deploy after code changes
 ```
 
 To stop services:
 ```sh
-railway down --service agent-os
+railway down --service <SERVICE_NAME>
 railway down --service pgvector
 ```
 
@@ -206,7 +215,10 @@ python -m app.main
 | `DB_USER` | No | `ai` | Database user |
 | `DB_PASS` | No | `ai` | Database password |
 | `DB_DATABASE` | No | `ai` | Database name |
+| `DB_DRIVER` | No | `postgresql+psycopg` | SQLAlchemy database driver |
 | `RUNTIME_ENV` | No | `prd` | Set to `dev` for auto-reload |
+| `WAIT_FOR_DB` | No | `False` | Wait for database before starting |
+| `AGNO_DEBUG` | No | `False` | Enable Agno debug logging |
 
 ## Learn More
 
