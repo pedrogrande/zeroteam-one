@@ -1,37 +1,96 @@
 # Connecting MCP Servers
 
-AgentOS can connect to any [Model Context Protocol](https://modelcontextprotocol.io) server. Each server exposes tools that your agent can use.
+AgentOS can connect to any [Model Context Protocol](https://modelcontextprotocol.io) server. Each server exposes tools your agents can use.
 
 ## Why MCP?
 
-- **No custom code** — any MCP server works out of the box
-- **Tool discovery** — tools are discovered from the server at connect time
-- **Graceful degradation** — a crashed server doesn't take down your agent
+- **No custom code** — any MCP server works out of the box.
+- **Tool discovery** — tools are discovered from the server at connect time.
+- **Lifecycle handled for you** — AgentOS connects/closes MCP sessions automatically as part of its lifespan.
 
-## Quick Start: Web Search
+The WebSearch agent in this template falls back to `MCPTools` against Parallel's keyless MCP server when no `PARALLEL_API_KEY` is set — see [`agents/web_search.py`](../agents/web_search.py) for a reference implementation.
 
-The starter template uses Parallel MCP for web search. It's free and requires no API key:
+## Adding an MCP server
+
+Use `MCPTools` from agno. Three transports are supported.
+
+### Streamable HTTP (hosted)
 
 ```python
-from agno.context.web.parallel_mcp import ParallelMCPBackend
-from agno.context.web.provider import WebContextProvider
+from agno.tools.mcp import MCPTools
 
-web_context = WebContextProvider(
-    backend=ParallelMCPBackend(),  # Free at search.parallel.ai/mcp
-    model=your_model,
-)
-
-agent = Agent(
-    tools=web_context.get_tools,
-    # ...
+github_tools = MCPTools(
+    url="https://mcp.github.com/mcp",
+    transport="streamable-http",
 )
 ```
 
-## Adding Other MCP Servers
+For headers (e.g. bearer-token auth), use `server_params`:
 
-Use `MCPContextProvider` to add any MCP server:
+```python
+from agno.tools.mcp import MCPTools
+from agno.tools.mcp.params import StreamableHTTPClientParams
 
-### stdio (local subprocess)
+github_tools = MCPTools(
+    transport="streamable-http",
+    server_params=StreamableHTTPClientParams(
+        url="https://mcp.github.com/mcp",
+        headers={"Authorization": f"Bearer {os.getenv('GITHUB_TOKEN', '')}"},
+    ),
+)
+```
+
+### Stdio (local subprocess)
+
+```python
+from agno.tools.mcp import MCPTools
+
+linear_tools = MCPTools(
+    command="npx -y @linear/mcp",
+    env={"LINEAR_API_KEY": os.getenv("LINEAR_API_KEY", "")},
+)
+```
+
+The stdio executable must be on `PATH` inside the runtime. The Docker image includes `uv`, `uvx`, `python`. Node-based servers (`npx …`) need Node installed:
+
+```dockerfile
+RUN apt-get update && apt-get install -y nodejs npm
+```
+
+### SSE
+
+```python
+notion_tools = MCPTools(
+    url="https://mcp.notion.so/sse",
+    transport="sse",
+)
+```
+
+## Wiring into an agent
+
+Pass the tools through `tools=` on the agent, alongside any other toolkits:
+
+```python
+from agno.agent import Agent
+
+from app.settings import default_model
+from db import get_postgres_db
+
+my_agent = Agent(
+    id="my-agent",
+    name="My Agent",
+    model=default_model(),
+    db=get_postgres_db(),
+    tools=[github_tools, linear_tools],
+    instructions="…",
+)
+```
+
+Then register the agent in `app/main.py` as usual. AgentOS detects `MCPTools` instances on registered agents and connects them on startup, closes them on shutdown.
+
+## Exposing one tool instead of many
+
+If an MCP server has many tools and you'd rather give your agent a single `query_<server>` tool that hands off to a sub-agent, use `MCPContextProvider`:
 
 ```python
 from agno.context.mcp import MCPContextProvider
@@ -39,107 +98,30 @@ from agno.context.mcp import MCPContextProvider
 linear_context = MCPContextProvider(
     server_name="linear",
     transport="stdio",
-    command="npx",
-    args=["-y", "@linear/mcp"],
-    env={"LINEAR_API_KEY": getenv("LINEAR_API_KEY", "")},
-    model=your_model,
+    command="npx -y @linear/mcp",
+    env={"LINEAR_API_KEY": os.getenv("LINEAR_API_KEY", "")},
+    model=default_model(),
+)
+
+my_agent = Agent(
+    ...,
+    tools=linear_context.get_tools(),
+    instructions=linear_context.instructions() + "\n\n" + my_instructions,
 )
 ```
 
-### streamable-http (hosted)
-
-```python
-github_context = MCPContextProvider(
-    server_name="github",
-    transport="streamable-http",
-    url="https://mcp.github.com/mcp",
-    headers={"Authorization": f"Bearer {getenv('GITHUB_TOKEN', '')}"},
-    model=your_model,
-)
-```
-
-### sse
-
-```python
-notion_context = MCPContextProvider(
-    server_name="notion",
-    transport="sse",
-    url="https://mcp.notion.so/sse",
-    model=your_model,
-)
-```
-
-## Context Modes
-
-Control how tools are exposed to your agent:
-
-### Default (agent mode)
-
-Wraps tools behind a sub-agent. Your agent sees one `query_<server_name>` tool:
-
-```python
-MCPContextProvider(
-    server_name="linear",
-    mode=ContextMode.default,  # or omit — this is the default
-    # ...
-)
-```
-
-**Use when:** Server has many tools, cryptic names, or names that collide with other servers.
-
-### Tools mode
-
-Flattens tools directly onto your agent:
-
-```python
-from agno.context.mode import ContextMode
-
-MCPContextProvider(
-    server_name="time",
-    mode=ContextMode.tools,
-    # ...
-)
-```
-
-**Use when:** Server has few, distinctively-named tools (cheaper, no sub-agent overhead).
-
-## Constructor Parameters
-
-| Parameter | Required | Description |
-|---|---|---|
-| `server_name` | yes | Derives `id=mcp_<server_name>` and tool names |
-| `transport` | yes | `"stdio"`, `"sse"`, or `"streamable-http"` |
-| `command` | stdio | Executable (`npx`, `uvx`, `python`, ...) |
-| `args` | stdio (optional) | CLI args as a list |
-| `env` | stdio (optional) | Env vars for the subprocess |
-| `url` | sse / streamable-http | Server URL |
-| `headers` | sse / streamable-http (optional) | HTTP headers dict |
-| `timeout_seconds` | optional | Connect + read timeout (default 30) |
-| `mode` | optional | `ContextMode.default` or `ContextMode.tools` |
-
-## stdio Executables
-
-`command` must be on `PATH` inside the runtime. The Docker image includes Python tooling (`uv`, `uvx`, `python`).
-
-**Node-based servers** (`npx @something/mcp`) need Node installed. Add to your Dockerfile:
-
-```dockerfile
-RUN apt-get update && apt-get install -y nodejs npm
-```
+This is the same pattern the CodeSearch Agent uses with `WorkspaceContextProvider`. Use it when the server has many tools or names that collide with other servers; otherwise prefer raw `MCPTools` so the model sees each tool directly.
 
 ## Debugging
 
-Check if the MCP server connected:
+If an MCP server isn't responding, check the container logs at startup — agno logs the connection attempt and any failure:
 
 ```bash
-curl -sS http://localhost:8000/contexts | jq '.[] | select(.id | startswith("mcp_"))'
+docker logs agentos-api 2>&1 | grep -iE "mcp|tool"
 ```
 
-Expected output:
-```json
-{ "id": "mcp_linear", "name": "linear", "ok": true, "detail": "mcp: linear (12 tools)" }
-```
+Common failures:
 
-If `ok: false`, check:
 - **stdio**: Is `command` on `PATH` inside the container?
-- **HTTP**: Is the URL reachable? Are headers correct?
+- **HTTP**: Is the URL reachable from the container? Are headers correct?
+- **Auth**: Is the bearer token set in `.env` (or `.env.production` for Railway)?
