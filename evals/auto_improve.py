@@ -76,9 +76,9 @@ def _build_improver() -> Agent:
 class FailureTrace:
     name: str
     input: str
-    expected_output: str | None
+    criteria: str | None
     expected_tool_calls: tuple[str, ...] | None
-    accuracy_score: float | None
+    judge_passed: bool | None
     reliability_passed: bool | None
     actual_response: str
 
@@ -159,8 +159,7 @@ def _run_cases(cases: list[Case]) -> list[CaseOutcome]:
         outcome = run_case(c)
         outcomes.append(outcome)
         status = "[green]PASS[/green]" if outcome.passed else "[red]FAIL[/red]"
-        score = f" {outcome.accuracy_score:.1f}/10" if outcome.accuracy_score is not None else ""
-        console.print(f"  {status} {c.name}{score}")
+        console.print(f"  {status} {c.name}")
     return outcomes
 
 
@@ -173,11 +172,11 @@ def _build_failure_traces(failures: list[tuple[Case, CaseOutcome]]) -> list[Fail
                 FailureTrace(
                     name=case.name,
                     input=case.input,
-                    expected_output=case.expected_output,
+                    criteria=case.criteria,
                     expected_tool_calls=case.expected_tool_calls,
-                    accuracy_score=outcome.accuracy_score,
+                    judge_passed=outcome.judge_passed,
                     reliability_passed=outcome.reliability_passed,
-                    actual_response=response.content or "",
+                    actual_response=str(response.content) if response.content else "",
                 )
             )
         return traces
@@ -197,12 +196,12 @@ def _build_improver_prompt(slug: str, instructions: str, traces: list[FailureTra
     ]
     for t in traces:
         parts += ["", f"### {t.name}", f"Input: {t.input}"]
-        if t.expected_output:
-            parts.append(f"Expected behavior: {t.expected_output}")
+        if t.criteria:
+            parts.append(f"Expected behavior: {t.criteria}")
         if t.expected_tool_calls:
             parts.append(f"Expected tool calls: {list(t.expected_tool_calls)}")
-        if t.accuracy_score is not None:
-            parts.append(f"Accuracy score: {t.accuracy_score:.1f}/10 (need >= 7)")
+        if t.judge_passed is False:
+            parts.append("Judge check: FAILED (response did not satisfy the criteria)")
         if t.reliability_passed is False:
             parts.append("Reliability check: FAILED (wrong tools fired)")
         parts.append(f"Actual response:\n{t.actual_response}")

@@ -104,7 +104,7 @@ chat:
 If the agent imports a new package (e.g. `from anthropic import …` for a Claude tool), add it to the `dependencies` list in [`pyproject.toml`](../pyproject.toml), then regenerate the lockfile:
 
 ```bash
-./scripts/generate_requirements.sh upgrade
+./scripts/generate_requirements.sh
 ```
 
 Then rebuild the container:

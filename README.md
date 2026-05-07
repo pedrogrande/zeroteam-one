@@ -90,7 +90,7 @@ This loop only closes if the agent code, the live platform, and the iteration to
 
 Improve-agent is the fast iteration loop. Evals are the regression suite that runs the same prompts against your agents on a schedule and tells you when behavior drifts.
 
-The eval surface is two files: [`evals/cases.py`](evals/cases.py) (declarative cases) and [`evals/__main__.py`](evals/__main__.py) (runner). Each case binds an input to an agent and uses agno's built-in [`AccuracyEval`](https://docs.agno.com/evals/accuracy) (LLM judge against an expected-output rubric) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (tool-call assertion). No custom DSL, no separate harness — agno's primitives directly.
+The eval surface is two files: [`evals/cases.py`](evals/cases.py) (declarative cases) and [`evals/__main__.py`](evals/__main__.py) (runner). Each case binds an input to an agent and uses agno's built-in [`AgentAsJudgeEval`](https://docs.agno.com/evals/agent-as-judge) (LLM judge against a rubric, binary pass/fail) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (tool-call assertion). No custom DSL, no separate harness — agno's primitives directly.
 
 ```bash
 python -m evals                # run the suite

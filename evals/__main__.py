@@ -1,27 +1,34 @@
 """
-Run Eval Cases
+Run Evals
 ==============
 
-    python -m evals                # run all cases
-    python -m evals --case <name>  # run one case
+python -m evals                # run all cases
+python -m evals --case <name>  # run one case
 
-Each case runs the agent via agno's ``AccuracyEval`` (when
-``expected_output`` is set) and ``ReliabilityEval`` (when
-``expected_tool_calls`` is set). Both log to Postgres through
-``eval_db`` — connect your AgentOS at os.agno.com to see history.
+Each case runs the agent once, then optionally checks the response with
+`AgentAsJudgeEval` (when `criteria` is set) and `ReliabilityEval` (when
+`expected_tool_calls` is set).
+
+Both log to Postgres through `eval_db`. Connect your AgentOS at os.agno.com to see history.
 
 Exit 0 on all-pass, non-zero on any failure or error.
 """
 
-import asyncio
-from dataclasses import dataclass
+# Hydrate os.environ from .env before any module that reads env at import time
+# (db_url, model factories, etc.). Pre-existing shell vars take precedence.
+from evals.dotenv import load_dotenv
 
-import typer
-from agno.eval import AccuracyEval, ReliabilityEval
-from rich.console import Console
-from rich.table import Table
+load_dotenv()
 
-from evals.cases import CASES, Case, eval_db
+import asyncio  # noqa: E402
+from dataclasses import dataclass  # noqa: E402
+
+import typer  # noqa: E402
+from agno.eval import AgentAsJudgeEval, ReliabilityEval  # noqa: E402
+from rich.console import Console  # noqa: E402
+from rich.table import Table  # noqa: E402
+
+from evals.cases import CASES, Case, eval_db  # noqa: E402
 
 app = typer.Typer(add_completion=False, no_args_is_help=False, pretty_exceptions_show_locals=False)
 console = Console()
@@ -30,8 +37,7 @@ console = Console()
 @dataclass
 class CaseOutcome:
     name: str
-    accuracy_passed: bool | None = None
-    accuracy_score: float | None = None
+    judge_passed: bool | None = None
     reliability_passed: bool | None = None
     error: str | None = None
 
@@ -39,78 +45,74 @@ class CaseOutcome:
     def passed(self) -> bool:
         if self.error:
             return False
-        checks = [c for c in (self.accuracy_passed, self.reliability_passed) if c is not None]
+        checks = [c for c in (self.judge_passed, self.reliability_passed) if c is not None]
         return bool(checks) and all(checks)
 
 
-def _run_accuracy(case: Case) -> tuple[bool | None, float | None, str | None]:
-    if case.expected_output is None:
-        return None, None, None
+async def _run_case_async(case: Case) -> CaseOutcome:
+    judge_passed: bool | None = None
+    rel_passed: bool | None = None
+    judge_err: str | None = None
+    rel_err: str | None = None
+
+    # One agent run per case — feeds both checks.
     try:
-        # arun() is required: workspace context tools are async-only.
-        result = asyncio.run(
-            AccuracyEval(
+        response = await case.agent.arun(input=case.input, stream=False)
+    except Exception as exc:
+        return CaseOutcome(name=case.name, error=f"agent.arun: {type(exc).__name__}: {exc}")
+
+    output_str = str(response.content) if response.content else ""
+
+    if case.criteria is not None:
+        try:
+            judge = await AgentAsJudgeEval(
                 name=case.name,
-                agent=case.agent,
-                input=case.input,
-                expected_output=case.expected_output,
+                criteria=case.criteria,
+                scoring_strategy="binary",
                 db=eval_db,
-            ).arun(print_summary=False, print_results=True)
-        )
-    except Exception as exc:
-        return False, None, f"accuracy: {type(exc).__name__}: {exc}"
-    if result is None or not result.results:
-        return False, None, "accuracy: judge returned no result"
-    score = float(result.avg_score)
-    return score >= case.accuracy_threshold, score, None
+            ).arun(input=case.input, output=output_str, print_results=True)
+        except Exception as exc:
+            judge_err = f"judge: {type(exc).__name__}: {exc}"
+        else:
+            if judge and judge.results:
+                judge_passed = judge.results[0].passed
+            else:
+                judge_err = "judge: returned no result"
 
+    if case.expected_tool_calls is not None:
+        try:
+            rel = ReliabilityEval(
+                name=case.name,
+                agent_response=response,
+                expected_tool_calls=list(case.expected_tool_calls),
+                allow_additional_tool_calls=case.allow_additional_tool_calls,
+                db=eval_db,
+            ).run(print_results=True)
+        except Exception as exc:
+            rel_err = f"reliability: {type(exc).__name__}: {exc}"
+        else:
+            if rel is None:
+                rel_err = "reliability: returned no result"
+            else:
+                rel_passed = rel.eval_status == "PASSED"
 
-def _run_reliability(case: Case) -> tuple[bool | None, str | None]:
-    if case.expected_tool_calls is None:
-        return None, None
-    try:
-        response = asyncio.run(case.agent.arun(input=case.input, stream=False))
-        result = ReliabilityEval(
-            name=case.name,
-            agent_response=response,
-            expected_tool_calls=list(case.expected_tool_calls),
-            allow_additional_tool_calls=case.allow_additional_tool_calls,
-            db=eval_db,
-        ).run(print_results=True)
-    except Exception as exc:
-        return False, f"reliability: {type(exc).__name__}: {exc}"
-    if result is None:
-        return False, "reliability: returned no result"
-    return result.eval_status == "PASSED", None
-
-
-def run_case(case: Case) -> CaseOutcome:
-    acc_passed, acc_score, acc_err = _run_accuracy(case)
-    rel_passed, rel_err = _run_reliability(case)
-    err = "; ".join(e for e in (acc_err, rel_err) if e) or None
     return CaseOutcome(
         name=case.name,
-        accuracy_passed=acc_passed,
-        accuracy_score=acc_score,
+        judge_passed=judge_passed,
         reliability_passed=rel_passed,
-        error=err,
+        error="; ".join(e for e in (judge_err, rel_err) if e) or None,
     )
 
 
-def _accuracy_cell(o: CaseOutcome) -> str:
-    if o.accuracy_passed is None:
-        return "[dim]—[/dim]"
-    score = f"{o.accuracy_score:.1f}/10" if o.accuracy_score is not None else "—"
-    style = "green" if o.accuracy_passed else "red"
-    tag = "PASS" if o.accuracy_passed else "FAIL"
-    return f"[{style}]{score} {tag}[/{style}]"
+def run_case(case: Case) -> CaseOutcome:
+    return asyncio.run(_run_case_async(case))
 
 
-def _reliability_cell(o: CaseOutcome) -> str:
-    if o.reliability_passed is None:
+def _check_cell(passed: bool | None) -> str:
+    if passed is None:
         return "[dim]—[/dim]"
-    style = "green" if o.reliability_passed else "red"
-    tag = "PASS" if o.reliability_passed else "FAIL"
+    style = "green" if passed else "red"
+    tag = "PASS" if passed else "FAIL"
     return f"[{style}]{tag}[/{style}]"
 
 
@@ -138,12 +140,12 @@ def main(
 
     table = Table(title="Eval Summary", title_style="bold sky_blue1", show_header=True, header_style="bold")
     table.add_column("Case", overflow="fold")
-    table.add_column("Accuracy")
+    table.add_column("Judge")
     table.add_column("Reliability")
     table.add_column("Status")
     for o in outcomes:
         status = "[green]PASS[/green]" if o.passed else "[red]FAIL[/red]"
-        table.add_row(o.name, _accuracy_cell(o), _reliability_cell(o), status)
+        table.add_row(o.name, _check_cell(o.judge_passed), _check_cell(o.reliability_passed), status)
 
     console.print()
     console.print(table)

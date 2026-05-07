@@ -4,14 +4,15 @@ Eval Cases
 
 Each case sends one input to one agent and (optionally) checks two things:
 
-- **accuracy** — an LLM judge scores the response 1-10 against
-  ``expected_output``. Pass at ``accuracy_threshold`` (default 7).
-- **reliability** — agno's ``ReliabilityEval`` checks which tools fired
-  against ``expected_tool_calls``.
+- **judge** — `AgentAsJudgeEval` scores the response against `criteria`
+  (binary pass/fail) using an LLM.
+- **reliability** — `ReliabilityEval` checks which tools fired against
+  `expected_tool_calls`.
 
-Both check primitives are agno built-ins. Results land in Postgres via
-``eval_db`` (visible at os.agno.com). Add a case below, then run
-``python -m evals``.
+Both check primitives are built-ins from Agno.
+Results are stored in Postgres via `eval_db` (visible at os.agno.com).
+
+Add a case below, then run `python -m evals`.
 """
 
 from dataclasses import dataclass
@@ -35,15 +36,14 @@ _WEB_SEARCH_TOOL = "parallel_search" if getenv("PARALLEL_API_KEY") else "web_sea
 
 @dataclass(frozen=True)
 class Case:
-    """One eval case: an input to one agent + optional accuracy/reliability checks."""
+    """One eval case: an input to one agent + optional judge/reliability checks."""
 
     name: str
     agent: Agent
     input: str
 
-    # Accuracy check (LLM judge). Set ``expected_output`` to enable.
-    expected_output: str | None = None
-    accuracy_threshold: int = 7
+    # Judge check (LLM judge against a rubric, binary pass/fail). Set ``criteria`` to enable.
+    criteria: str | None = None
 
     # Reliability check (tool-call assertion). Set ``expected_tool_calls`` to enable.
     expected_tool_calls: tuple[str, ...] | None = None
@@ -56,7 +56,7 @@ CASES: tuple[Case, ...] = (
         name="web_search_recent_anthropic_research",
         agent=web_search,
         input="What did Anthropic publish about agent research recently?",
-        expected_output=(
+        criteria=(
             "Describes a real, recent Anthropic publication about agents "
             "and cites at least one URL. Does not fabricate dates or papers."
         ),
@@ -67,7 +67,7 @@ CASES: tuple[Case, ...] = (
         name="code_search_lists_registered_agents",
         agent=code_search,
         input="Which agents are registered in this AgentOS instance?",
-        expected_output=(
+        criteria=(
             "Identifies both `web-search` and `code-search` as the two registered agents. May reference app/main.py."
         ),
         expected_tool_calls=("query_my_codebase",),
@@ -77,7 +77,7 @@ CASES: tuple[Case, ...] = (
         name="code_search_admits_unknown_function",
         agent=code_search,
         input="Where is the function `fizz_buzz_xyz` defined in this project?",
-        expected_output=(
+        criteria=(
             "Honestly says the function `fizz_buzz_xyz` is not defined in this project. Does not fabricate a file path."
         ),
     ),

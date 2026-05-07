@@ -3,19 +3,13 @@
 > Claude Code prompt. Open Claude Code in this repo and paste:
 > `Run docs/run-evals.md`
 
-You're running the agent platform's eval suite, diagnosing every failure, fixing what's in scope, and stopping when all cases pass. Surface area is two files: [`evals/cases.py`](../evals/cases.py) (declares cases) and [`evals/__main__.py`](../evals/__main__.py) (runner). Each case uses agno's built-in [`AccuracyEval`](https://docs.agno.com/evals/accuracy) (LLM judge against `expected_output`) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (asserts which tools fired) — no custom DSL.
+You're running the agent platform's eval suite, diagnosing every failure, fixing what's in scope, and stopping when all cases pass. Surface area is two files: [`evals/cases.py`](../evals/cases.py) (declares cases) and [`evals/__main__.py`](../evals/__main__.py) (runner). Each case uses agno's built-in [`AgentAsJudgeEval`](https://docs.agno.com/evals/agent-as-judge) (LLM judge against a `criteria` rubric, binary pass/fail) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (asserts which tools fired) — no custom DSL.
 
 ## 0. Preconditions
 
 - Postgres up: `docker compose ps` shows `agentos-db`. If not, `docker compose up -d agentos-db`.
-- `OPENAI_API_KEY` exported (and `PARALLEL_API_KEY` if you have one — the runner pins the expected web-search tool name based on it).
 - Venv active: `source .venv/bin/activate`. `evals/cases.py` imports the agents directly from `agents/`, so no AgentOS server has to be running.
-
-If the user hasn't loaded their env into the shell, run:
-
-```bash
-set -a && source .env && set +a
-```
+- `.env` populated with `OPENAI_API_KEY` (and `PARALLEL_API_KEY` if you have one — the runner pins the expected web-search tool name based on it). `evals/__main__.py` calls `evals.dotenv.load_dotenv()` at startup, so you do not need to source `.env` first.
 
 ## 1. Run the suite
 
@@ -37,8 +31,8 @@ For every failed case, decide which kind of failure it is and fix at the appropr
 
 | Symptom | Likely cause | Where to fix |
 |---|---|---|
-| Judge scores 5-7, says "answer is right but missing X" | Agent's instructions don't push for X | `agents/<slug>.py` — tighten the rule |
-| Judge scores low, response is fabricated | Agent hallucinated when it should have said it didn't know | Add a "if you can't find a real source, say so plainly" rule to the agent's instructions |
+| Judge fails, "answer is right but missing X" | Agent's instructions don't push for X | `agents/<slug>.py` — tighten the rule |
+| Judge fails, response is fabricated | Agent hallucinated when it should have said it didn't know | Add a "if you can't find a real source, say so plainly" rule to the agent's instructions |
 | Reliability fails: "missing tool X" | Agent didn't call the expected tool on this prompt | (a) Strengthen the routing rule in instructions, OR (b) the case is too narrow — broaden `expected_tool_calls` or drop the assertion |
 | Reliability fails: "additional tool Y called" with `allow_additional_tool_calls=False` | Agent fanned out beyond the case's expectation | Tighten the agent's instructions OR set `allow_additional_tool_calls=True` |
 | Many cases fail at once | Broad regression — model swap, MCP server down, tool removed | Diagnose the root cause first; do NOT paper over with prompt edits |
@@ -88,7 +82,7 @@ Case(
     agent=<the_agent>,
     input="<prompt>",
     # Either or both of:
-    expected_output="<rubric describing a correct response>",
+    criteria="<rubric describing a correct response>",
     expected_tool_calls=("<tool_name>",),
 )
 ```
@@ -112,13 +106,12 @@ class Case:
     agent: Agent
     input: str
 
-    # Accuracy (LLM judge): set both to enable.
-    expected_output: str | None = None
-    accuracy_threshold: int = 7
+    # Judge (LLM rubric, binary pass/fail): set to enable.
+    criteria: str | None = None
 
     # Reliability (tool-call assertion): set to enable.
     expected_tool_calls: tuple[str, ...] | None = None
     allow_additional_tool_calls: bool = True
 ```
 
-A case with both checks set runs the agent twice (once for accuracy, once for reliability) — accept the cost or split into two cases if it bites.
+The runner calls `agent.arun()` once per case and feeds the response into both checks, so cases that set both fields cost one agent run, not two.

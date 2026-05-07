@@ -32,8 +32,8 @@ Shared:
 | [`agents/code_search.py`](agents/code_search.py) | Reference agent — context provider. |
 | [`db/session.py`](db/session.py) | `get_postgres_db()`, `create_knowledge()`. |
 | [`db/url.py`](db/url.py) | Builds the database URL from env. |
-| [`evals/cases.py`](evals/cases.py) | Eval cases (each is a `Case` with optional accuracy + reliability checks). |
-| [`evals/__main__.py`](evals/__main__.py) | `python -m evals` runner — wraps agno's `AccuracyEval` + `ReliabilityEval`. |
+| [`evals/cases.py`](evals/cases.py) | Eval cases (each is a `Case` with optional judge + reliability checks). |
+| [`evals/__main__.py`](evals/__main__.py) | `python -m evals` runner — wraps agno's `AgentAsJudgeEval` + `ReliabilityEval`. |
 | [`compose.yaml`](compose.yaml) | Docker Compose for local development. |
 | [`railway.json`](railway.json) | Railway deploy config (Docker + 2 replicas + 4Gi/2vCPU). |
 
@@ -139,7 +139,7 @@ Run [`docs/improve-agent.md`](docs/improve-agent.md). Single-pass loop: define t
 
 ## Evals
 
-The eval suite lives in [`evals/`](evals/). Each case wraps agno's [`AccuracyEval`](https://docs.agno.com/evals/accuracy) (LLM judge) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (tool-call assertion). Run with `python -m evals`. Results log to Postgres via `db=eval_db` so history is visible at os.agno.com.
+The eval suite lives in [`evals/`](evals/). Each case wraps agno's [`AgentAsJudgeEval`](https://docs.agno.com/evals/agent-as-judge) (LLM judge against a rubric, binary pass/fail) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (tool-call assertion). Run with `python -m evals`. Results log to Postgres via `db=eval_db` so history is visible at os.agno.com.
 
 To diagnose failures and fix in scope, run [`docs/run-evals.md`](docs/run-evals.md) in Claude Code.
 
