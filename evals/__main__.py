@@ -22,6 +22,7 @@ load_dotenv()
 
 import asyncio  # noqa: E402
 from dataclasses import dataclass  # noqa: E402
+from uuid import uuid4  # noqa: E402
 
 import typer  # noqa: E402
 from agno.eval import AgentAsJudgeEval, ReliabilityEval  # noqa: E402
@@ -55,20 +56,34 @@ async def _run_case_async(case: Case, *, verbose: bool) -> CaseOutcome:
     judge_err: str | None = None
     rel_err: str | None = None
 
-    # One agent run per case — feeds both checks.
+    # Dedicated session_id per case so `aget_last_run_output` reads back the
+    # right run, and so eval traffic doesn't bleed into agent history.
+    session_id = f"eval-{case.name}-{uuid4().hex[:8]}"
+
     try:
-        with console.status(
-            f"[bold]running[/bold] {case.agent.id}…",
-            spinner="dots",
-        ):
-            response = await case.agent.arun(input=case.input, stream=False)
+        if verbose:
+            # Stream the agent run with rich panels (message → tool calls →
+            # response), same UI as `os.agno.com`. aprint_response returns None,
+            # so fetch the RunOutput from storage afterward for the eval checks.
+            await case.agent.aprint_response(
+                input=case.input,
+                stream=True,
+                session_id=session_id,
+                markdown=True,
+            )
+            response = await case.agent.aget_last_run_output(session_id=session_id)
+            if response is None:
+                return CaseOutcome(name=case.name, error="agent: no run output recorded")
+        else:
+            with console.status(
+                f"[bold]running[/bold] {case.agent.id}…",
+                spinner="dots",
+            ):
+                response = await case.agent.arun(input=case.input, stream=False, session_id=session_id)
     except Exception as exc:
         return CaseOutcome(name=case.name, error=f"agent.arun: {type(exc).__name__}: {exc}")
 
     output_str = str(response.content) if response.content else ""
-
-    if verbose:
-        _print_agent_run(case, response, output_str)
 
     if case.criteria is not None:
         try:
@@ -121,23 +136,6 @@ def _check_cell(passed: bool | None) -> str:
     style = "green" if passed else "red"
     tag = "PASS" if passed else "FAIL"
     return f"[{style}]{tag}[/{style}]"
-
-
-def _print_agent_run(case: Case, response: object, output_str: str) -> None:
-    """Print the full agent response + tool calls. Verbose-mode default."""
-    console.print(f"[bold]Input[/bold]\n{case.input}")
-    console.print(f"\n[bold]Response[/bold]\n{output_str or '[dim](empty)[/dim]'}")
-
-    tools = getattr(response, "tools", None) or []
-    if tools:
-        console.print("\n[bold]Tool calls[/bold]")
-        for t in tools:
-            args_repr = repr(t.tool_args) if t.tool_args else ""
-            line = f"  • {t.tool_name}({args_repr})" if args_repr else f"  • {t.tool_name}()"
-            console.print(line)
-    else:
-        console.print("\n[bold]Tool calls[/bold]  [dim](none)[/dim]")
-    console.print()
 
 
 @app.callback(invoke_without_command=True)

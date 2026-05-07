@@ -14,16 +14,12 @@ You're running the agent platform's eval suite, diagnosing every failure, fixing
 ## 1. Run the suite
 
 ```bash
-python -m evals
+python -m evals               # full suite, verbose (response + tool calls per case)
+python -m evals -q            # same but only the summary
+python -m evals --case <name> # single case while iterating
 ```
 
 Output ends with a summary block. Exit code is 0 on all-pass, non-zero on any failure or error.
-
-To re-run a single case while iterating:
-
-```bash
-python -m evals --case <name>
-```
 
 ## 2. Diagnose each failure
 

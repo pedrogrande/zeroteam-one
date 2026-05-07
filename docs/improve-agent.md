@@ -80,7 +80,7 @@ For the example: if the agent only called `web_search` once and never `web_fetch
 One file: `agents/<slug>.py`. Surgical edits only — pick **one** lever and change it:
 
 - **Instructions** — most fixes live here. Tighten or add a rule. Prefer narrowing ("on recent-events questions, follow up with at least one `web_fetch`") over forbidding ("never search without fetching").
-- **Tools** — add or remove a tool. Removing a tool that the agent keeps misusing is sometimes faster than re-prompting around it.
+- **Tools** — add or remove a tool. Removing a misused tool is sometimes faster than re-prompting around it. To add a new agno toolkit, look it up via the `agno-docs` MCP (configured in [`.mcp.json`](../.mcp.json)) so you get the right import path and constructor args.
 - **Context provider** — swap mode (e.g. `agent` → `tools`) if the routing layer is the problem.
 - **Model** — bump if the agent is genuinely under-capable. Last resort.
 - **`num_history_runs`** — raise if the agent is losing context across turns; lower if old turns are leaking into new ones.
@@ -97,7 +97,7 @@ Re-send each probe from Step 2. Compare the new responses to the old ones (the `
 
 ## 7. Iterate
 
-If all cases pass: tell the user, suggest committing on the feature branch (`git add -p && git commit -m "improve(<slug>): <one-line summary>"`), and stop.
+If all cases pass: tell the user, suggest committing on the feature branch (`git add -p && git commit -m "improve(<slug>): <one-line summary>"`), and stop. For a regression check across the full eval suite, see [`docs/run-evals.md`](run-evals.md).
 
 If some still fail: pick the next lever and edit again. Cap at three attempts on the same pattern — if the third attempt still fails, the issue may not be prompt-shaped (could be a tool capability gap, a model limit, or a missing data source). Surface that finding to the user; don't keep grinding.
 
