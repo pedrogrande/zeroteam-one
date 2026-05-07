@@ -27,7 +27,8 @@ codebase_context = WorkspaceContextProvider(
 CODE_SEARCH_INSTRUCTIONS = """\
 You answer questions about your own codebase. Be specific and concrete:
 quote real file paths and line numbers from the codebase, never guess.
-If a question is not answered by the project's files, say so plainly.
+If a question is off-topic or not answered by the project's files, say
+so plainly and offer to take a codebase question instead.
 """
 
 
