@@ -83,20 +83,23 @@ sleep 15
 echo ""
 echo -e "${BOLD}Creating application service...${NC}"
 echo ""
-# Forward every relevant env var the first deploy might need. Keys not
-# set in the local shell become empty strings (harmless). Use
-# ./scripts/railway/env-sync.sh to sync from .env after the fact.
-railway add -s agent-os \
-    -v "DB_USER=${DB_USER:-ai}" \
-    -v "DB_PASS=${DB_PASS:-ai}" \
-    -v "DB_HOST=pgvector.railway.internal" \
-    -v "DB_PORT=${DB_PORT:-5432}" \
-    -v "DB_DATABASE=${DB_DATABASE:-ai}" \
-    -v "DB_DRIVER=postgresql+psycopg" \
-    -v "WAIT_FOR_DB=True" \
-    -v "PORT=8000" \
-    -v "OPENAI_API_KEY=${OPENAI_API_KEY}" \
-    -v "PARALLEL_API_KEY=${PARALLEL_API_KEY:-}"
+# Forward every relevant env var the first deploy might need. Optional
+# keys are only included when set — Railway CLI rejects empty values.
+# Use ./scripts/railway/env-sync.sh to sync the rest from .env later.
+RAILWAY_VARS=(
+    -v "DB_USER=${DB_USER:-ai}"
+    -v "DB_PASS=${DB_PASS:-ai}"
+    -v "DB_HOST=pgvector.railway.internal"
+    -v "DB_PORT=${DB_PORT:-5432}"
+    -v "DB_DATABASE=${DB_DATABASE:-ai}"
+    -v "DB_DRIVER=postgresql+psycopg"
+    -v "WAIT_FOR_DB=True"
+    -v "PORT=8000"
+    -v "OPENAI_API_KEY=${OPENAI_API_KEY}"
+)
+[[ -n "$PARALLEL_API_KEY" ]] && RAILWAY_VARS+=(-v "PARALLEL_API_KEY=${PARALLEL_API_KEY}")
+
+railway add -s agent-os "${RAILWAY_VARS[@]}"
 
 echo ""
 echo -e "${BOLD}Deploying application...${NC}"
