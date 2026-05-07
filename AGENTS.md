@@ -141,9 +141,7 @@ Run [`docs/improve-agent.md`](docs/improve-agent.md). Single-pass loop: define t
 
 The eval suite lives in [`evals/`](evals/). Each case wraps agno's [`AgentAsJudgeEval`](https://docs.agno.com/evals/agent-as-judge) (LLM judge against a rubric, binary pass/fail) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (tool-call assertion). Run with `python -m evals`. Results log to Postgres via `db=eval_db` so history is visible at os.agno.com.
 
-To diagnose failures and fix in scope, run [`docs/run-evals.md`](docs/run-evals.md) in Claude Code.
-
-To hill-climb on a failing agent's INSTRUCTIONS automatically — eval suite as the verifier, no human in the loop — run `python -m evals.auto_improve --agent <slug>`. Refuses to start with uncommitted changes in the target file; persists each accepted improvement to disk so `git diff` always reflects what changed.
+To diagnose failures and fix in scope, run [`docs/eval-and-improve.md`](docs/eval-and-improve.md) in Claude Code.
 
 ## Environment Variables
 

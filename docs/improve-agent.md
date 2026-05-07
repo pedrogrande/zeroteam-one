@@ -3,119 +3,128 @@
 > Claude Code prompt. Open Claude Code in this repo and paste:
 > `Run docs/improve-agent.md`
 
-You are iterating on a live agent against a running AgentOS container. The platform is on `http://localhost:8000` with hot-reload enabled (`RUNTIME_ENV=dev`), so edits to `agents/<slug>.py` are picked up by uvicorn within ~1s. No rebuild, no restart.
+You are autonomously improving a target agent. **No user-supplied test cases** — you derive your own probes from the agent's stated purpose (its `INSTRUCTIONS`), test the agent against them, judge the results, and iterate on `agents/<slug>.py` until the agent reliably does what its instructions say it does.
 
-This is a **single-pass** improvement loop, not a recurring scheduled run. One pass usually takes 10-15 minutes. Re-run if the user is still unhappy.
+The platform is on `http://localhost:8000` with hot-reload enabled (`RUNTIME_ENV=dev`), so edits to `agents/<slug>.py` are picked up by uvicorn within ~1s. No rebuild, no restart.
+
+This is a **single-pass** improvement loop. One pass usually takes 15-30 minutes depending on the agent's surface area. Re-run if behavior still drifts.
 
 ## 0. Preconditions
 
 - `agentos-api` running: `docker compose ps`. If not, ask the user to `docker compose up -d --build` first.
 - `curl -sSf http://localhost:8000/health` returns 200.
-- Recommend the user create a feature branch before starting (`git checkout -b improve/<agent-slug>-$(date +%Y%m%d)`) so any wrong turns are easy to revert.
+- Ask the user for the target agent **slug** (e.g. `web-search`).
+- Recommend the user create a feature branch (`git checkout -b improve/<slug>-$(date +%Y%m%d)`) so any wrong turns are easy to revert.
 
-## 1. Define test cases
+## 1. Read the agent's intent
 
-Ask the user:
+Open `agents/<slug>.py`. Capture:
 
-1. **Which agent?** (slug — e.g. `web-search`)
-2. **What is it doing wrong?** Describe the failure mode in their own words.
-3. **Three to five concrete inputs** the agent should handle, with the **expected behavior** for each.
+- **Stated purpose** — the file's docstring + the `INSTRUCTIONS` string.
+- **Tools** — what's wired to the agent and what each one does.
+- **Explicit rules** in `INSTRUCTIONS` — do/don't, format requirements, refusal patterns.
 
-Example shape:
+Restate the agent's purpose to the user in 1-2 sentences before generating probes — sanity-check that you understood. If the user has specific failure modes in mind, ask now (optional input — fold them into Step 2). Otherwise you're flying solo.
 
-```
-Agent: web-search
-Failure: vague answers, no citations, doesn't drill into pages.
-Cases:
-  1. "what changed in Anthropic's research this week?"
-     Expected: at least one web_fetch on a real source; cites URLs.
-  2. "find the top 3 recent articles about Mistral's new models"
-     Expected: 3 sources, all URLs that resolve.
-  3. "what's the latest on OpenAI's o-series?"
-     Expected: cites source dates from the past 60 days.
-```
+## 2. Derive probes
 
-Lock these in before touching any code.
+Generate enough probes to meaningfully exercise the agent's stated capabilities — usually **8-15**, more if the surface area is broad. Cover four categories:
 
-## 2. Run the cases against the live agent
+- **Golden path** (3-5): typical, in-scope questions the agent should handle well.
+- **Edge cases** (2-3): ambiguous, out-of-scope, or boundary questions. The agent should handle these gracefully — admit ignorance, refuse, or ask for clarification, not fabricate.
+- **Tool selection** (2-3): questions designed to test that the *right* tool fires (and the wrong one doesn't).
+- **Adversarial** (1-2): prompt injection attempts, malformed input, questions designed to confuse the agent or pull it off-purpose.
 
-For each case, send a probe via cURL and capture the response:
+For each probe, write a one-line **expected behavior** describing what "good" looks like — drawn from the agent's `INSTRUCTIONS`. *You* are the oracle here; don't ask the user to validate your judgment.
+
+## 3. Run the probes against the live agent
+
+For each probe, send a cURL request and capture both the response and the tool calls:
 
 ```bash
 curl -sS -X POST http://localhost:8000/agents/<slug>/runs \
-  -F "message=<the prompt>" \
+  -F "message=<probe text>" \
   -F "user_id=claude-improve" \
   -F "stream=false" \
-  -o /tmp/probe-1.json \
+  -o /tmp/probe-<n>.json \
   -w "HTTP %{http_code} in %{time_total}s\n"
 
-jq -r '.content // .' < /tmp/probe-1.json
+jq -r '.content // .' < /tmp/probe-<n>.json
 ```
 
-For multi-turn cases, capture `session_id` from the first response and pass `-F "session_id=<id>"` on the next call:
+Read the tool calls from the container:
 
 ```bash
-SID=$(jq -r '.session_id' < /tmp/probe-1.json)
-curl ... -F "session_id=$SID" ...
+docker logs agentos-api --since 30s 2>&1 | grep -E "Tool Calls|Running:|Error" | head -40
 ```
 
-Save each response to `/tmp/probe-<n>.json` so you can compare before vs. after.
+Save each response so you can compare before vs. after.
 
-## 3. Read the result
+## 4. Judge each probe
 
-Look at three things:
+For every probe: did the response match the expected behavior? Did the right tools fire?
 
-1. **The response itself** — does it match the expected behavior?
-2. **Which tools fired** — read the container logs:
-   ```bash
-   docker logs agentos-api --since 30s 2>&1 | grep -E "Tool Calls|Running:|Error" | head -40
-   ```
-   "Tool Calls" lines tell you which tools the agent chose; arguments are inline.
-3. **Any errors** — rate limits, missing API keys, MCP server timeouts. Surface these to the user immediately if they explain the failure.
+Tag each as **PASS** / **FAIL**. Group failures by likely root cause:
 
-For the example: if the agent only called `web_search` once and never `web_fetch`, the instructions don't push hard enough on drilling into pages.
+- **Missing rule** — `INSTRUCTIONS` don't push for the behavior you expected.
+- **Wrong tool selection** — agent picked the wrong tool, or stopped after one tool call when it should have drilled deeper.
+- **Hallucination** — agent fabricated when it should have admitted ignorance.
+- **Wrong format / tone** — answer is right but the shape is off.
+- **Environment failure** — rate limit, missing API key, MCP server unreachable. Surface to the user; don't paper over.
 
-## 4. Edit the agent
+## 5. Edit
 
-One file: `agents/<slug>.py`. Surgical edits only — pick **one** lever and change it:
+Apply surgical edits to `agents/<slug>.py`. One lever per iteration:
 
 - **Instructions** — most fixes live here. Tighten or add a rule. Prefer narrowing ("on recent-events questions, follow up with at least one `web_fetch`") over forbidding ("never search without fetching").
-- **Tools** — add or remove a tool. Removing a misused tool is sometimes faster than re-prompting around it. To add a new agno toolkit, look it up via the `agno-docs` MCP (configured in [`.mcp.json`](../.mcp.json)) so you get the right import path and constructor args.
+- **Tools** — add or remove. Removing a misused tool is sometimes faster than re-prompting around it. To add a new agno toolkit, look it up via the `agno-docs` MCP (configured in [`.mcp.json`](../.mcp.json)) so you get the right import path and constructor args.
 - **Context provider** — swap mode (e.g. `agent` → `tools`) if the routing layer is the problem.
 - **Model** — bump if the agent is genuinely under-capable. Last resort.
 - **`num_history_runs`** — raise if the agent is losing context across turns; lower if old turns are leaking into new ones.
 
-Keep edits short. If you add more than ~5 lines of instruction in one pass, you're probably bolting; back up and try removing instead.
+Keep edits short. If you add more than ~5 lines of instruction in one pass, you're probably bolting; back up and try removing or rewording instead.
 
-## 5. Hot-reload picks up the change
+## 6. Hot-reload, re-probe failing cases
 
-The dev compose mounts `.:/app` and runs `uvicorn --reload --reload-dir agents …`. Save the file, wait ~2 seconds, you're done. No rebuild, no restart.
+Save the file. Wait ~2 seconds for uvicorn's reloader. Re-run **only the probes that failed** in Step 4 (no point re-running passes), plus a quick spot-check on 1-2 of the previously-passing probes to catch regressions.
 
-## 6. Re-run the test cases
-
-Re-send each probe from Step 2. Compare the new responses to the old ones (the `/tmp/probe-<n>.json` files from before). Did the failures pass this time? Did anything previously passing regress?
+Did the failures pass this time? Did anything previously passing regress?
 
 ## 7. Iterate
 
-If all cases pass: tell the user, suggest committing on the feature branch (`git add -p && git commit -m "improve(<slug>): <one-line summary>"`), and stop. For a regression check across the full eval suite, see [`docs/run-evals.md`](run-evals.md).
+Cap at **5 iterations**. Stop when:
 
-If some still fail: pick the next lever and edit again. Cap at three attempts on the same pattern — if the third attempt still fails, the issue may not be prompt-shaped (could be a tool capability gap, a model limit, or a missing data source). Surface that finding to the user; don't keep grinding.
+- All probes pass — move to Step 8.
+- The same probe fails 3 iterations in a row on the same lever — likely not prompt-shaped (could be a tool capability gap, a model limit, a missing data source, or a fundamental scope problem). Surface that finding to the user; don't keep grinding.
+- 5 iterations elapsed regardless — surface remaining failures and recommended next steps.
+
+## 8. Report
+
+Summarize for the user:
+
+- N probes generated, M passed initially, K passed finally.
+- One line per accepted edit (which lever, what changed).
+- `git diff agents/<slug>.py` (one short block).
+- Suggested commit message and next step (commit, regress, iterate).
+
+For a regression check across the committed eval suite, see [`docs/eval-and-improve.md`](eval-and-improve.md).
 
 ---
 
-## A worked example (lifted from the blog post)
+## A worked example
 
-Your WebSearch Agent fails on "what changed in Anthropic's research this week?". The response is a vague summary with no citations.
+Target: `web-search`. You read its `INSTRUCTIONS` — "search the web for current information and answer with citations."
 
-You probe it. Container logs show the agent called `web_search` once, got back stale snippets, stopped. Never called `web_fetch`.
+You generate 10 probes. One: *"what changed in Anthropic's research this week?"* Expected: at least one `web_fetch` on a real source, cites a URL.
 
-You edit `agents/web_search.py` and add one rule to the instructions:
+You probe. Container logs show the agent called `web_search` once, got back stale snippets, stopped. Never called `web_fetch`. Vague answer, no citations. **FAIL.**
 
-```
-When the user asks about recent events or specific pages, follow up with
-at least one `web_fetch` to read the most relevant source before answering.
-```
+Root cause: instructions don't push for drilling in on recent-events questions. You add one rule:
 
-Hot-reload kicks in. You re-run the probe. Now the agent calls `web_search`, then `web_fetch` on the top result, and answers with a real citation. One-line fix, single iteration.
+> *When the user asks about recent events or specific pages, follow up with at least one `web_fetch` to read the most relevant source before answering.*
+
+Hot-reload kicks in. Re-run the probe. Now the agent calls `web_search`, then `web_fetch`, answers with a real citation. **PASS.**
+
+You re-probe everything else. No regressions. Move on.
 
 That's the loop. Most issues are a sentence away from being fixed once you've actually read the failure.

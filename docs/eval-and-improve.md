@@ -1,7 +1,7 @@
-# Run Evals
+# Eval and Improve
 
 > Claude Code prompt. Open Claude Code in this repo and paste:
-> `Run docs/run-evals.md`
+> `Run docs/eval-and-improve.md`
 
 You're running the agent platform's eval suite, diagnosing every failure, fixing what's in scope, and stopping when all cases pass. Surface area is two files: [`evals/cases.py`](../evals/cases.py) (declares cases) and [`evals/__main__.py`](../evals/__main__.py) (runner). Each case uses agno's built-in [`AgentAsJudgeEval`](https://docs.agno.com/evals/agent-as-judge) (LLM judge against a `criteria` rubric, binary pass/fail) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (asserts which tools fired) — no custom DSL.
 

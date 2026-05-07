@@ -3,7 +3,7 @@
 > Claude Code prompt. Open Claude Code in this repo and paste:
 > `Run docs/create-new-agent.md`
 
-You are creating a new agent in this AgentOS template. The user already has the platform running locally on `http://localhost:8000` with hot-reload enabled (`RUNTIME_ENV=dev`). Edits to `agents/`, `app/`, and `db/` reload uvicorn within ~1s — no restart needed unless you change dependencies.
+You are creating a new agent in this AgentOS template. The user already has the platform running locally on `http://localhost:8000` (`RUNTIME_ENV=dev`). Uvicorn hot-reloads on edits inside an existing module, but **registering a new agent module requires a container restart** — see Step 6.
 
 ## 0. Preconditions
 
@@ -38,17 +38,20 @@ Once the user picks one, you have name, purpose, and tools settled — only ask 
 
 ### Specifics
 
-Ask, in one consolidated message:
+If the user came in with a concrete agent in mind, ask all five below in one consolidated message. If they came through the guided path, only items 2, 4, and 5 are still unknown — the rest are settled. Don't re-ask.
 
 1. **Name and purpose** — what should this agent do? One sentence.
-2. **Pattern** — does it use:
-   - **Direct tools** (like the WebSearch Agent's raw `MCPTools`)? Best when the user knows exactly what tools the agent needs and wants them visible on the agent.
-   - **A context provider** (like the CodeSearch Agent's `WorkspaceContextProvider`)? Best when the agent should query a single information source through one `query_<thing>` tool.
+2. **Pattern** — propose the right one with a heuristic, don't make the user choose blind:
+   - **Direct tools** (like [`agents/web_search.py`](../agents/web_search.py)): default when the agent uses ≤2 toolkits, or the user explicitly named the tools.
+   - **Context provider** (like [`agents/code_search.py`](../agents/code_search.py)): default when the agent queries a single information source through one `query_<thing>` tool, or you're hiding a sub-agent.
 3. **Tools / sources** — which MCP servers, toolkits, or context providers? URL of the MCP server if any. (Default: nothing — just chat.)
-4. **Model** — default is `gpt-5.4` via `app.settings.default_model()`. Override only if the user asks.
-5. **Slug** — short kebab-case id (e.g. `linear-agent`). Used as the agent's `id`, in URLs, and in `app/config.yaml`.
+4. **Required env vars** — for each toolkit chosen, identify the API key(s) it needs (from the toolkit's `Prerequisites` section in agno docs — see Step 2). For each required key, confirm the user has it set in `.env`. If they don't, offer:
+   - (a) add it to `.env` now,
+   - (b) drop that toolkit and pick something keyless (HackerNews, ArXiv, Wikipedia, DuckDuckGo via WebSearchTools),
+   - (c) build anyway and surface the auth error during smoke test.
+5. **Slug** — short kebab-case id (e.g. `linear-agent`). Used as the agent's `id`, in URLs, and in `app/config.yaml`. Propose one based on the agent's purpose.
 
-Skip any item the guided path already settled. Propose sensible defaults for **Pattern** and **Slug** when you can — don't make the user re-answer questions.
+Model defaults to `gpt-5.4` via `app.settings.default_model()` — override only if the user asks.
 
 ## 2. Ground the design in agno docs
 
@@ -57,7 +60,14 @@ If the user named any specific toolkit, MCP server, or integration the agent sho
 - Preferred: the `agno-docs` MCP server (configured in [`.mcp.json`](../.mcp.json)) — search for the toolkit / integration name and read the relevant page(s).
 - Fallback: fetch <https://docs.agno.com/llms.txt> and search inline for the relevant sections.
 
-Use what you find to ground the `tools=[…]` list in the real agno API — correct import path, constructor args, required env vars. Don't guess. Skip this step if the agent is chat-only with no tools.
+For each toolkit, capture four things:
+
+- **Import path** (e.g. `from agno.tools.exa import ExaTools`).
+- **Constructor args** that matter for this agent (categories, domains, max_results, etc.).
+- **Required env vars** — feed these back into Step 1, item 4.
+- **Pip dependencies** — some toolkits need extra packages (`exa-py`, `anthropic`, `firecrawl-py`, `linear-sdk`, …). The toolkit's `Prerequisites` section lists them. Capture now, install in Step 6.
+
+Don't guess any of the four. Skip this step entirely if the agent is chat-only with no tools.
 
 ## 3. Generate the agent file
 
@@ -132,29 +142,32 @@ chat:
       - "Third example prompt"
 ```
 
-## 6. Dependencies (only if needed)
+## 6. Reload the container
 
-If the agent imports a new package (e.g. `from anthropic import …` for a Claude tool), add it to the `dependencies` list in [`pyproject.toml`](../pyproject.toml), then regenerate the lockfile:
+Hot-reload is unreliable for newly registered agents — uvicorn's reloader doesn't always re-import top-level modules cleanly, so the agent may register but its toolkit state caches stale. Always reload the container after Step 4. Two paths:
 
-```bash
-./scripts/generate_requirements.sh
-```
+- **No new pip deps** (the common case) — restart only:
 
-Then rebuild the container:
+  ```bash
+  docker compose restart agentos-api
+  ```
 
-```bash
-docker compose up -d --build
-```
+- **New pip deps added in Step 2** — update the lockfile and rebuild:
 
-If no new dependency was added, hot-reload will pick the new agent up automatically — no rebuild needed.
+  ```bash
+  ./scripts/generate_requirements.sh
+  docker compose up -d --build
+  ```
 
 ## 7. Smoke test
 
-Wait ~2 seconds for hot-reload, then probe the agent via cURL:
+Poll `/health` until the API is back up, then probe the agent with **one of the quick prompts you wrote in Step 5** (so the smoke test exercises what real users will hit):
 
 ```bash
+until curl -sSf http://localhost:8000/health > /dev/null; do sleep 0.5; done
+
 curl -sS -X POST http://localhost:8000/agents/<slug>/runs \
-  -F "message=<a representative question for this agent>" \
+  -F "message=<one of the quick_prompts you just wrote>" \
   -F "user_id=claude-create-agent" \
   -F "stream=false" \
   -o /tmp/agent-out.json \
@@ -171,7 +184,7 @@ docker logs agentos-api --since 30s 2>&1 | grep -E "Tool Calls|Running:|Error" |
 
 ## 8. If the smoke test fails
 
-- **HTTP 404** — the agent isn't registered. Re-check Step 4.
+- **HTTP 404** — the agent isn't registered, or the container wasn't restarted. Re-check Step 4 and Step 6.
 - **HTTP 5xx** — read `docker logs agentos-api --tail 50` for the traceback. Most failures are import errors, missing env vars, or a typo in the agent's `tools=` list.
 - **Empty response** — check the logs for tool call errors (rate limits, missing API keys, MCP server unreachable). Surface the issue to the user; don't paper over it.
 - **Tool not firing when expected** — the instruction prompt isn't strong enough. Tell the user; suggest tightening or running `docs/improve-agent.md` once the agent is loaded.
