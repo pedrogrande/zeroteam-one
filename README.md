@@ -43,15 +43,13 @@ The template ships with two reference agents:
 | WebSearch | Direct tools | `parallel_search` / `parallel_extract` (needs `PARALLEL_API_KEY`); `web_search` / `web_fetch` keyless |
 | CodeSearch | Context provider sub-agent | `query_my_codebase` |
 
-Direct tools put each capability in front of the agent. Context providers wrap a source behind a single `query_<source>` tool backed by a specialist sub-agent. Most agents you build extend one of these.
-
 **To create a new agent**, open [Claude Code](https://claude.ai/code) in this repo and paste:
 
 ```
 Run docs/create-new-agent.md
 ```
 
-Claude asks what the agent should do, generates the file in `agents/`, registers it in `app/main.py`, adds prompts to `app/config.yaml`, and smoke-tests via cURL. Hot-reload picks up the new file in under 2s. Usually 5-10 minutes for a simple agent.
+Claude opens gathers details about the agent, then generates the file in `agents/`, registers it in `app/main.py`, adds prompts to `app/config.yaml`, restarts the container (uvicorn's reloader doesn't reliably pick up newly registered modules), and smoke-tests via cURL. Usually 5-10 minutes for a simple agent.
 
 ## Step 3: Test your agent
 
@@ -68,38 +66,37 @@ Run realistic prompts. Try edge cases. Watch the traces and sessions in the UI.
 
 ## Step 4: Recursively improve your agent
 
-When the agent does something wrong, hand Claude Code the improvement prompt:
+Whenever you lock in an update to your agent's behavior, hand Claude Code the improvement prompt:
 
 ```
 Run docs/improve-agent.md
 ```
 
-Claude Code uses your running platform to fix your running platform. Same cURL, same logs, same repo. The loop:
+Claude Code uses your running platform to fix the live agent. It runs a single-pass autonomous loop. You don't need to write any test cases, Claude derives them from the agent's `INSTRUCTIONS`:
 
-1. **Define test cases.** 3-5 inputs and expected behaviors.
-2. **Run them against the live agent** via cURL.
-3. **Read the result.** Response plus container logs (which tools fired, what the model thought).
-4. **Edit the agent.** One file, surgical edits to instructions, tools, or model.
-5. **Hot-reload** picks up the change automatically.
-6. **Re-run** the test cases. Compare.
-7. **Iterate** until they pass.
-
-Concrete example. The WebSearch Agent fails on "what changed in Anthropic's research this week?" Vague answer, no citations. Claude reads the logs, sees the agent called `web_search` once and stopped, never called `web_fetch`. Claude adds one sentence to the instructions ("on recent-events questions, follow up with at least one `web_fetch`"), hot-reloads, re-runs. Passes. One-line fix found by reading the actual behavior.
-
-This loop only closes if the agent code, the live platform, and the iteration tool all live in one place. That's the point of owning the stack.
+1. **Read the agent's intent** from its `INSTRUCTIONS`.
+2. **Derive 8-15 probes** covering the golden path, edge cases, tool selection, and adversarial inputs.
+3. **Run them against the live agent** via cURL; capture responses and tool calls from container logs.
+4. **Judge each probe** against expected behavior.
+5. **Edit the agent** — one file, one lever per iteration (instructions, tools, model).
+6. **Hot-reload** picks up the change in ~2s.
+7. **Re-probe failing cases** plus a spot-check for regressions. Iterate up to 5 times.
 
 ## Evals
 
-Improve-agent is the fast iteration loop. Evals are the regression suite that runs the same prompts against your agents on a schedule and tells you when behavior drifts.
+Improve-agent is a fast iteration loop. Evals are the regression suite that runs the same prompts against your agents on a schedule and tells you when behavior drifts.
 
-The eval surface is two files: [`evals/cases.py`](evals/cases.py) (declarative cases) and [`evals/__main__.py`](evals/__main__.py) (runner). Each case binds an input to an agent and uses agno's built-in [`AgentAsJudgeEval`](https://docs.agno.com/evals/agent-as-judge) (LLM judge against a rubric, binary pass/fail) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (tool-call assertion). No custom DSL, no separate harness. agno's primitives directly.
+The eval surface is two files: [`evals/cases.py`](evals/cases.py) (declarative cases) and [`evals/__main__.py`](evals/__main__.py) (runner). Evals use agno's built-in [`AgentAsJudgeEval`](https://docs.agno.com/evals/agent-as-judge) (LLM judge against a rubric, binary pass/fail) and/or [`ReliabilityEval`](https://docs.agno.com/evals/reliability) (tool-call assertion). No custom DSL, no separate harness. agno's primitives directly.
 
 ```bash
-python -m evals                # run the suite
+python -m evals                # run the suite (concise)
+python -m evals -v             # stream the full agent run with rich panels
 python -m evals --case <name>  # run one case
 ```
 
-Results log to Postgres via `db=eval_db`. Connect your AgentOS at [os.agno.com](https://os.agno.com) to see eval history over time. Drop [`docs/eval-and-improve.md`](docs/eval-and-improve.md) into Claude Code to run the suite, diagnose failures, and fix in scope.
+Results log to Postgres via `db=eval_db`. Connect your AgentOS at [os.agno.com](https://os.agno.com) to see eval history over time.
+
+Run [`docs/eval-and-improve.md`](docs/eval-and-improve.md) in Claude Code to run the suite, diagnose failures, and fix in scope.
 
 ## Going beyond agents
 
