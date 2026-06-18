@@ -1,6 +1,7 @@
 services:
-  app:
-    # Keep container alive so Codespaces can attach the IDE to it
+  # The IDE host — keep alive so Codespaces can attach to it.
+  # The API (zeroteam-api) runs as a separate service via postStartCommand.
+  zeroteam-api:
     command: /bin/sh -c "while sleep 1000; do :; done"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -8,6 +9,6 @@ services:
     volumes:
       - ..:/workspace:cached
 
-  db:
+  zeroteam-db:
     ports:
       - "5432:5432"

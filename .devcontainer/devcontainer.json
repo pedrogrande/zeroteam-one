@@ -1,10 +1,10 @@
 {
   "name": "Agno AgentOS Course",
   "dockerComposeFile": [
-    "../compose.yml",
-    "compose.override.yml"
+    "../compose.yaml",
+    "compose.override.yaml"
   ],
-  "service": "app",
+  "service": "zeroteam-api",
   "workspaceFolder": "/workspace",
   "forwardPorts": [
     8000,
@@ -13,14 +13,26 @@
   "portsAttributes": {
     "8000": {
       "label": "AgentOS API",
-      "onAutoForward": "openPreview"
+      "onAutoForward": "notify"
     },
     "5432": {
       "label": "PostgreSQL",
       "onAutoForward": "silent"
     }
   },
-  "postCreateCommand": "cp example.env .env",
+  "secrets": {
+    "OPENAI_API_KEY": {
+      "description": "Required for all agents and embeddings (text-embedding-3-small)"
+    },
+    "OLLAMA_API_KEY": {
+      "description": "For Ollama-hosted models (glm-5.1:cloud). Optional."
+    }
+  },
+  "remoteEnv": {
+    "AGENTOS_URL": "https://${CODESPACE_NAME}-8000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
+  },
+  "postCreateCommand": "cp -n example.env .env && ./scripts/venv_setup.sh",
+  "postStartCommand": "docker compose -f ../compose.yaml up -d zeroteam-api",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -28,10 +40,20 @@
         "ms-python.vscode-pylance",
         "ms-python.debugpy",
         "mtxr.sqltools",
-        "mtxr.sqltools-driver-pg"
+        "mtxr.sqltools-driver-pg",
+        "charliermarsh.ruff",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python"
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.codeActionsOnSave": {
+            "source.fix": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        }
       }
     }
   }

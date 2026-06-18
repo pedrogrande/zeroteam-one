@@ -1,5 +1,7 @@
 # AgentOS on Railway
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/pedrogrande/zeroteam-one)
+
 An agent platform you build, improve, and run using coding agents.
 
 The platform runs in your cloud, behind your auth, with all your data stored in your database. Because trace data, agent code, system logs, and the iteration tool all live in one place, coding agents like Claude Code can read, update, and improve the platform end-to-end.
