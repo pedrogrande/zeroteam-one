@@ -1,0 +1,38 @@
+{
+  "name": "Agno AgentOS Course",
+  "dockerComposeFile": [
+    "../compose.yml",
+    "compose.override.yml"
+  ],
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [
+    8000,
+    5432
+  ],
+  "portsAttributes": {
+    "8000": {
+      "label": "AgentOS API",
+      "onAutoForward": "openPreview"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "cp example.env .env",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
+    }
+  }
+}

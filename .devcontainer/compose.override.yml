@@ -1,0 +1,13 @@
+services:
+  app:
+    # Keep container alive so Codespaces can attach the IDE to it
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+    volumes:
+      - ..:/workspace:cached
+
+  db:
+    ports:
+      - "5432:5432"
