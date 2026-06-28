@@ -20,7 +20,9 @@ from db import get_postgres_db
 if getenv("PARALLEL_API_KEY"):
     web_tools: ParallelTools | MCPTools = ParallelTools()
 else:
-    web_tools = MCPTools(url="https://search.parallel.ai/mcp", transport="streamable-http")
+    web_tools = MCPTools(
+        url="https://search.parallel.ai/mcp", transport="streamable-http"
+    )
 
 
 WEB_SEARCH_INSTRUCTIONS = """\
@@ -41,6 +43,7 @@ web_search = Agent(
     db=get_postgres_db(),
     tools=[web_tools],
     instructions=WEB_SEARCH_INSTRUCTIONS,
+    tool_call_limit=10,
     enable_agentic_memory=True,
     add_datetime_to_context=True,
     add_history_to_context=True,

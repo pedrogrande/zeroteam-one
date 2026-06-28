@@ -15,11 +15,30 @@ AgentOS  (app/main.py)
 ```
 
 Shared:
+
 - PostgreSQL + pgvector for sessions, memory, knowledge.
-- `app.settings.default_model()` returns `OpenAIResponses(id="gpt-5.4")` — bump the model in one place.
+- `app.settings.default_model()` returns `Ollama(id=getenv("AGENT_MODEL_ID", "glm-5.2:cloud"))` — configurable via the `AGENT_MODEL_ID` env var. Change it in one place.
 - Scheduler enabled by default (`scheduler=True`).
 - Slack interface lights up automatically when both `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` are set.
 - JWT auth on whenever `RUNTIME_ENV == "prd"` (so production deploys are gated by default).
+
+## Guardrails
+
+All agents include input validation guardrails via `pre_hooks` (see [`app/guardrails.py`](app/guardrails.py)):
+
+| Guardrail | Type | Agents |
+|-----------|------|--------|
+| `PromptInjectionGuardrail` | Pre-hook | All agents + team |
+| `PIIDetectionGuardrail` | Pre-hook | Engineering Team only (with `mask_pii=True`) |
+
+Output validation is enforced via `post_hooks`:
+
+| Validator | Type | Agents |
+|-----------|------|--------|
+| `validate_citations_from_tools` | Post-hook | WebSearch |
+| `make_file_path_validator` | Post-hook | CodeSearch |
+
+All agents have `tool_call_limit=10` (team: `15`) to bound tool invocations per run.
 
 ## Key Files
 
@@ -30,8 +49,9 @@ Shared:
 | [`app/config.yaml`](app/config.yaml) | Quick prompts per agent (keyed by agent `id`). |
 | [`agents/web_search.py`](agents/web_search.py) | Reference agent — direct tools (Parallel SDK or MCP). |
 | [`agents/code_search.py`](agents/code_search.py) | Reference agent — context provider. |
-| [`db/session.py`](db/session.py) | `get_postgres_db()`, `create_knowledge()`. |
+| [`db/session.py`](db/session.py) | `get_postgres_db()`, `create_knowledge()`, `create_studio_knowledge()`. |
 | [`db/url.py`](db/url.py) | Builds the database URL from env. |
+| [`db/knowledge_bases.py`](db/knowledge_bases.py) | Five domain knowledge bases for the Studio Registry. |
 | [`evals/cases.py`](evals/cases.py) | Eval cases (each is a `Case` with optional judge + reliability checks). |
 | [`evals/__main__.py`](evals/__main__.py) | `python -m evals` runner — wraps agno's `AgentAsJudgeEval` + `ReliabilityEval`. |
 | [`compose.yaml`](compose.yaml) | Docker Compose for local development. |
@@ -124,6 +144,47 @@ my_kb = create_knowledge("My Knowledge", "my_vectors")
 
 Knowledge bases use PgVector with `SearchType.hybrid` and `text-embedding-3-small`. Document contents go into `<table_name>_contents`.
 
+### Studio Knowledge Bases
+
+Five domain knowledge bases are registered with the AgentOS Studio Registry so they're selectable when building agents, teams, and workflows in Studio. They live in [`db/knowledge_bases.py`](db/knowledge_bases.py) and are wired in via `AgentOS(knowledge=STUDIO_KNOWLEDGE_BASES)` in [`app/main.py`](app/main.py).
+
+| Knowledge base | Table | Domain |
+|----------------|-------|--------|
+| AI Assisted Learning | `ai_assisted_learning` | Research & practice for AI-accelerated learning |
+| Agent Design | `agent_design` | Patterns for designing agents — instructions, tools, guardrails |
+| Agentic Workflow Design | `agentic_workflow_design` | Multi-step pipeline patterns — loops, conditions, HITL |
+| User Profile Information | `user_profile_information` | User-specific context for personalisation |
+| AgentOS Lab | `agentos_lab` | Operational knowledge for the AgentOS platform |
+| Task Contract | `task_contract` | Task contract data model & lifecycle — fields, state machine, actors, API |
+
+Each is built with [`create_studio_knowledge()`](db/session.py), which wraps `create_knowledge()` with two Studio-specific additions:
+
+- **`description`** — surfaced in Studio's knowledge picker.
+- **`contents_db`** — required for a knowledge base to be resolvable from Studio (AgentOS skips KBs without one during registry population). Document contents land in `<table>_contents`.
+- **Agentic chunking on PDF uploads** — a `PDFReader(chunking_strategy=AgenticChunking())` is pre-seeded under the `pdf` reader key so PDFs uploaded through the Studio Knowledge UI are chunked semantically rather than with the default fixed-size `DocumentChunking`.
+
+No hard-coded agents or teams reference these KBs — they exist purely for Studio-composed agents, teams, and workflows. Upload content via the Studio Knowledge UI or the `POST /knowledge/{name}/content` endpoint.
+
+### Ingesting content by script
+
+For bulk ingestion from the filesystem, use [`scripts/ingest_knowledge.py`](scripts/ingest_knowledge.py) — a reusable CLI that ingests files from a directory into any Studio knowledge base by name:
+
+```bash
+docker compose up -d zeroedge-db        # ensure Postgres + pgvector is up
+source .venv/bin/activate
+
+# List available knowledge bases
+python scripts/ingest_knowledge.py --list
+
+# Ingest all *.md files from project-docs/agent-design/ into "Agent Design"
+python scripts/ingest_knowledge.py "Agent Design" project-docs/agent-design
+
+# Ingest PDFs (and markdown) into another KB
+python scripts/ingest_knowledge.py "AgentOS Lab" path/to/docs --include "*.pdf" "*.md"
+```
+
+Requirements: `OPENAI_API_KEY` set (in `.env` or shell) and the DB reachable from the host. By default the script skips files whose content hash is already in the vector DB (`skip_if_exists=True`) — cheap, idempotent re-runs with no re-embedding of unchanged files. Pass `--no-skip-if-exists` to re-embed and upsert in place when you've edited files and want them refreshed. Per-file reader selection is automatic via `ReaderFactory` (`.md` → `MarkdownReader` with header-aware chunking, `.pdf` → `PDFReader` with the KB's pre-seeded `AgenticChunking`). Pass `--reader <name>` to force a specific reader.
+
 ## Adding a new agent
 
 Two options:
@@ -162,10 +223,13 @@ Run [`docs/review-and-improve.md`](docs/review-and-improve.md). A recurring swee
 | `SLACK_BOT_TOKEN` | no | — | Bot token. Set with signing secret to enable Slack interface. |
 | `SLACK_SIGNING_SECRET` | no | — | Signing secret. Both must be set for the interface to load. |
 | `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASS` / `DB_DATABASE` | no | matches compose | Postgres connection. |
-| `DB_DRIVER` | no | `postgresql+psycopg` | SQLAlchemy driver. |
+| `DB_DRIVER` | no | `postgresql+psycopg` | SQLAlchemy driver. Validated against an allowlist. |
 | `PORT` | no | `8000` | API server port. |
 | `AGNO_DEBUG` | no | `False` | If `True`, agno emits verbose debug logs. Compose sets this for dev. |
 | `WAIT_FOR_DB` | no | `False` | If `True`, the entrypoint blocks on the DB before starting. Compose sets this. |
+| `AGENT_MODEL_ID` | no | `glm-5.2:cloud` | Model ID for `default_model()`. |
+| `EMBEDDER_MODEL_ID` | no | `text-embedding-3-small` | OpenAI embedder model for Knowledge bases. |
+| `AGNO_TRACING` | no | `false` | If `true`, enables AgentOS tracing (needs an exporter to be useful). |
 
 ## Ports
 

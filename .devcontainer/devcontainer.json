@@ -4,7 +4,7 @@
     "../compose.yaml",
     "compose.override.yaml"
   ],
-  "service": "zeroteam-api",
+  "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "forwardPorts": [
     8000,
@@ -32,7 +32,6 @@
     "AGENTOS_URL": "https://${CODESPACE_NAME}-8000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
   },
   "postCreateCommand": "cp -n example.env .env && ./scripts/venv_setup.sh",
-  "postStartCommand": "docker compose -f ../compose.yaml up -d zeroteam-api",
   "customizations": {
     "vscode": {
       "extensions": [

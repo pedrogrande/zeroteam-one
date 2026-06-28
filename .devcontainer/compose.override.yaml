@@ -1,14 +1,27 @@
 services:
-  # The IDE host — keep alive so Codespaces can attach to it.
-  # The API (zeroteam-api) runs as a separate service via postStartCommand.
-  zeroteam-api:
+  # IDE host for Codespaces — stays alive so the editor can attach.
+  # The API (zeroedge-api) and DB (zeroedge-db) start as dependencies,
+  # so uvicorn runs with its normal command from compose.yaml.
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: Dockerfile
     command: /bin/sh -c "while sleep 1000; do :; done"
+    depends_on:
+      - zeroedge-api
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OLLAMA_API_KEY=${OLLAMA_API_KEY}
     volumes:
       - ..:/workspace:cached
 
-  zeroteam-db:
+  # API runs with its normal uvicorn command from compose.yaml.
+  # We only inject the secret env vars here.
+  zeroedge-api:
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+
+  zeroedge-db:
     ports:
       - "5432:5432"

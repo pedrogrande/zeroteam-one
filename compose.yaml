@@ -1,7 +1,7 @@
 services:
-  zeroteam-db:
+  zeroedge-db:
     image: agnohq/pgvector:18
-    container_name: zeroteam-db
+    container_name: zeroedge-db
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -12,14 +12,27 @@ services:
       POSTGRES_PASSWORD: ${DB_PASS:-ai}
       POSTGRES_DB: ${DB_DATABASE:-ai}
     networks:
-      - zeroteam
+      - zeroedge
 
-  zeroteam-api:
+  zeroedge-test-db:
+    image: agnohq/pgvector:18
+    container_name: zeroedge-test-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ai
+      POSTGRES_PASSWORD: ai
+      POSTGRES_DB: task_test
+    networks:
+      - zeroedge
+
+  zeroedge-api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: zeroteam-api
-    image: ${IMAGE_NAME:-zeroteam}:${IMAGE_TAG:-latest}
+    container_name: zeroedge-api
+    image: ${IMAGE_NAME:-zeroedge}:${IMAGE_TAG:-latest}
     # --reload-dir limits the watcher to dirs that actually contain runtime
     # code. Without this, edits under docs/, scripts/, tmp/ would each
     # restart uvicorn — disruptive when chatting with an agent.
@@ -39,20 +52,20 @@ services:
       AGNO_DEBUG: "True"
       WAIT_FOR_DB: "True"
       AGENTOS_URL: http://127.0.0.1:8000
-      DB_HOST: zeroteam-db
+      DB_HOST: zeroedge-db
       DB_PORT: 5432
       DB_USER: ${DB_USER:-ai}
       DB_PASS: ${DB_PASS:-ai}
       DB_DATABASE: ${DB_DATABASE:-ai}
     depends_on:
-      - zeroteam-db
+      - zeroedge-db
     networks:
-      - zeroteam
+      - zeroedge
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
 networks:
-  zeroteam:
+  zeroedge:
 
 volumes:
   pgdata:

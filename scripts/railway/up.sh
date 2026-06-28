@@ -59,9 +59,15 @@ if [[ -z "$OPENAI_API_KEY" ]]; then
     exit 1
 fi
 
+if [[ -z "$OLLAMA_API_KEY" ]]; then
+    echo "OLLAMA_API_KEY not set. The default model (glm-5.2:cloud) authenticates"
+    echo "to https://ollama.com via this key. Add to .env (or .env.production) or export it."
+    exit 1
+fi
+
 echo -e "${BOLD}Initializing project...${NC}"
 echo ""
-railway init -n "agent-platform"
+railway init -n "petes-agno" 2>/dev/null || echo -e "${DIM}Project already initialized${NC}"
 
 echo ""
 echo -e "${BOLD}Deploying PgVector database...${NC}"
@@ -86,6 +92,9 @@ echo ""
 # Forward every relevant env var the first deploy might need. Optional
 # keys are only included when set — Railway CLI rejects empty values.
 # Use ./scripts/railway/env-sync.sh to sync the rest from .env later.
+# RUNTIME_ENV=dev disables JWT authorization for the initial deploy.
+# Switch to prd (and set JWT_VERIFICATION_KEY) once you're ready to gate
+# the API. See AGENTS.md → Environment Variables.
 RAILWAY_VARS=(
     -v "DB_USER=${DB_USER:-ai}"
     -v "DB_PASS=${DB_PASS:-ai}"
@@ -95,7 +104,9 @@ RAILWAY_VARS=(
     -v "DB_DRIVER=postgresql+psycopg"
     -v "WAIT_FOR_DB=True"
     -v "PORT=8000"
+    -v "RUNTIME_ENV=dev"
     -v "OPENAI_API_KEY=${OPENAI_API_KEY}"
+    -v "OLLAMA_API_KEY=${OLLAMA_API_KEY}"
 )
 [[ -n "$PARALLEL_API_KEY" ]] && RAILWAY_VARS+=(-v "PARALLEL_API_KEY=${PARALLEL_API_KEY}")
 

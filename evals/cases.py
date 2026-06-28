@@ -17,12 +17,16 @@ Add a case below, then run `python -m evals`.
 
 from dataclasses import dataclass
 from os import getenv
+from typing import Union
 
 from agno.agent import Agent
+from agno.team import Team
 
+from agents.agno_support import agno_support_agent
 from agents.code_search import code_search
 from agents.web_search import web_search
 from db import get_postgres_db
+from teams.engineering_team import engineering_team
 
 # Single eval DB instance — every case logs through it.
 eval_db = get_postgres_db()
@@ -39,7 +43,7 @@ class Case:
     """One eval case: an input to one agent + optional judge/reliability checks."""
 
     name: str
-    agent: Agent
+    agent: Union[Agent, Team]
     input: str
 
     # Judge check (LLM judge against a rubric, binary pass/fail). Set ``criteria`` to enable.
@@ -69,7 +73,8 @@ CASES: tuple[Case, ...] = (
         agent=code_search,
         input="Which agents are registered in this AgentOS instance?",
         criteria=(
-            "Identifies both `web-search` and `code-search` as the two registered agents. May reference app/main.py."
+            "Identifies `web-search`, `code-search`, and `agno-support-agent` as the "
+            "three registered agents. May reference app/main.py."
         ),
         expected_tool_calls=("query_my_codebase",),
     ),
@@ -81,5 +86,30 @@ CASES: tuple[Case, ...] = (
         criteria=(
             "Honestly says the function `fizz_buzz_xyz` is not defined in this project. Does not fabricate a file path."
         ),
+    ),
+    # AgnoSupport — MCP docs lookup fires and response references agno.com docs.
+    Case(
+        name="agno_support_answers_guardrail_question",
+        agent=agno_support_agent,
+        input="How do I add a guardrail to an Agent in Agno?",
+        criteria=(
+            "Answers the question by referencing Agno documentation. "
+            "Mentions pre_hooks and/or BaseGuardrail. The response is "
+            "grounded in fetched doc content rather than a generic answer."
+        ),
+        # The Agno Support agent uses MCPTools(url="https://docs.agno.com/mcp").
+        # No expected_tool_calls pinned — the MCP tool name may vary; the
+        # judge criteria above are sufficient to validate the response.
+    ),
+    # Engineering Team — team leader routes to a member.
+    Case(
+        name="engineering_team_routes_to_web_search",
+        agent=engineering_team,
+        input="Search the web for the latest news on OpenAI.",
+        criteria=(
+            "The response is a web search result about OpenAI. "
+            "Indicates the team leader delegated to the web-search member."
+        ),
+        # No expected_tool_calls — team routing is hard to predict exactly.
     ),
 )

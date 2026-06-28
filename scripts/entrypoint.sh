@@ -26,7 +26,18 @@ echo -e "${NC}"
 
 if [[ "$WAIT_FOR_DB" = true || "$WAIT_FOR_DB" = True ]]; then
     echo -e "    ${DIM}Waiting for database at ${DB_HOST}:${DB_PORT}...${NC}"
-    dockerize -wait tcp://$DB_HOST:$DB_PORT -timeout 300s
+    python -c "
+import socket, sys, time
+deadline = time.time() + 300
+while time.time() < deadline:
+    try:
+        socket.create_connection(('${DB_HOST}', ${DB_PORT}), timeout=2).close()
+        break
+    except OSError:
+        time.sleep(1)
+else:
+    sys.exit('Timed out waiting for database after 300s')
+"
     echo -e "    ${BOLD}Database ready.${NC}"
     echo ""
 fi

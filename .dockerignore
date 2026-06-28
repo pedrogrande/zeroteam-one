@@ -18,6 +18,9 @@ docs
 # Ignore .env files
 .env
 .env.production
+
+# Template files (committed, but not needed in the image)
+example.env
 .envrc
 
 # ignore virtualenvs
@@ -30,3 +33,13 @@ aienv*
 # Project-specific
 tmp/
 .claude/
+
+# ---------------------------------------------------------------------------
+# Deploy 1 — exclude vendored + test-only content.
+# Keep project-docs/, knowledge/, evals/ in the image so
+# scripts/ingest_knowledge.py can embed docs into pgvector.
+# After ingestion (Deploy 2), add project-docs/, knowledge/, evals/
+# here to slim the image — vectors persist in the database.
+# ---------------------------------------------------------------------------
+agno/
+tests/

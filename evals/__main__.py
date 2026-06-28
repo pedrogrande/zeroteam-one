@@ -15,6 +15,12 @@ Both log to Postgres through `eval_db`. Connect your AgentOS at os.agno.com to s
 Exit 0 on all-pass, non-zero on any failure or error.
 """
 
+# ⚠️ CRITICAL IMPORT ORDER ⚠️
+# The dotenv loader MUST run before any module that reads environment
+# variables at import time (db.url, agents.web_search, evals.cases, etc.).
+# Do NOT add any imports above the load_dotenv() call below.
+# If you need to add an import, add it AFTER load_dotenv().
+
 # Hydrate os.environ from .env before any module that reads env at import time
 # (db_url, model factories, etc.). Pre-existing shell vars take precedence.
 from evals.dotenv import load_dotenv
@@ -28,6 +34,7 @@ from uuid import uuid4  # noqa: E402
 import typer  # noqa: E402
 from agno.eval import AgentAsJudgeEval, ReliabilityEval  # noqa: E402
 from agno.run.agent import RunOutput  # noqa: E402
+from agno.run.team import TeamRunOutput  # noqa: E402
 from rich.console import Console  # noqa: E402
 from rich.live import Live  # noqa: E402
 from rich.status import Status  # noqa: E402
@@ -35,7 +42,9 @@ from rich.table import Table  # noqa: E402
 
 from evals.cases import CASES, Case, eval_db  # noqa: E402
 
-app = typer.Typer(add_completion=False, no_args_is_help=False, pretty_exceptions_show_locals=False)
+app = typer.Typer(
+    add_completion=False, no_args_is_help=False, pretty_exceptions_show_locals=False
+)
 console = Console()
 
 
@@ -50,7 +59,9 @@ class CaseOutcome:
     def passed(self) -> bool:
         if self.error:
             return False
-        checks = [c for c in (self.judge_passed, self.reliability_passed) if c is not None]
+        checks = [
+            c for c in (self.judge_passed, self.reliability_passed) if c is not None
+        ]
         return bool(checks) and all(checks)
 
 
@@ -64,7 +75,7 @@ async def _run_case_async(case: Case, *, verbose: bool) -> CaseOutcome:
     # history, and so verbose mode can fetch the run back via aget_last_run_output.
     session_id = f"eval-{case.name}-{uuid4().hex[:8]}"
 
-    response: RunOutput | None
+    response: RunOutput | TeamRunOutput | None
     try:
         if verbose:
             # Stream the agent run with rich panels (Message → Tool Calls →
@@ -82,7 +93,9 @@ async def _run_case_async(case: Case, *, verbose: bool) -> CaseOutcome:
         if response is None:
             return CaseOutcome(name=case.name, error="agent: no run output recorded")
     except Exception as exc:
-        return CaseOutcome(name=case.name, error=f"agent.arun: {type(exc).__name__}: {exc}")
+        return CaseOutcome(
+            name=case.name, error=f"agent.arun: {type(exc).__name__}: {exc}"
+        )
 
     output_str = str(response.content) if response.content else ""
 
@@ -134,7 +147,9 @@ async def _run_case_async(case: Case, *, verbose: bool) -> CaseOutcome:
     )
 
 
-async def _run_with_live_spinner(case: Case, session_id: str) -> RunOutput | None:
+async def _run_with_live_spinner(
+    case: Case, session_id: str
+) -> RunOutput | TeamRunOutput | None:
     """Stream the agent's run with a single-line spinner that updates per tool call.
 
     Avoids freezing the screen during long agent calls without spamming the user
@@ -143,7 +158,7 @@ async def _run_with_live_spinner(case: Case, session_id: str) -> RunOutput | Non
     base_label = f"[bold]running[/bold] {case.agent.id}…"
     spinner = Status(base_label, spinner="dots")
 
-    response: RunOutput | None = None
+    response: RunOutput | TeamRunOutput | None = None
     with Live(spinner, console=console, transient=True, refresh_per_second=10):
         async for event in case.agent.arun(
             input=case.input,
@@ -152,7 +167,7 @@ async def _run_with_live_spinner(case: Case, session_id: str) -> RunOutput | Non
             yield_run_output=True,
             session_id=session_id,
         ):
-            if isinstance(event, RunOutput):
+            if isinstance(event, (RunOutput, TeamRunOutput)):
                 response = event
                 continue
             event_type = getattr(event, "event", None)
@@ -160,14 +175,18 @@ async def _run_with_live_spinner(case: Case, session_id: str) -> RunOutput | Non
                 tool = getattr(event, "tool", None)
                 tool_name = getattr(tool, "tool_name", None)
                 if tool_name:
-                    spinner.update(f"[bold]running[/bold] {case.agent.id} → [cyan]{tool_name}[/cyan]…")
+                    spinner.update(
+                        f"[bold]running[/bold] {case.agent.id} → [cyan]{tool_name}[/cyan]…"
+                    )
             elif event_type == "ToolCallCompleted":
                 spinner.update(base_label)
 
     return response
 
 
-def _print_response_concise(response: RunOutput, output_str: str) -> None:
+def _print_response_concise(
+    response: RunOutput | TeamRunOutput, output_str: str
+) -> None:
     """Plain-text response + one-line tool summary. Used in default (non-verbose) mode."""
     console.print()
     console.print("[bold]Response[/bold]")
@@ -189,12 +208,16 @@ def _print_judge_verdict(eval_result: object) -> None:
         console.print(f"[dim]  {reason}[/dim]")
 
 
-def _print_reliability_verdict(rel_result: object, expected_tools: tuple[str, ...]) -> None:
+def _print_reliability_verdict(
+    rel_result: object, expected_tools: tuple[str, ...]
+) -> None:
     passed = getattr(rel_result, "eval_status", "") == "PASSED"
     style = "green" if passed else "red"
     tag = "PASS" if passed else "FAIL"
     expected = ", ".join(expected_tools)
-    console.print(f"\n[bold]Reliability:[/bold] [{style}]{tag}[/{style}]  [dim]expected: {expected}[/dim]")
+    console.print(
+        f"\n[bold]Reliability:[/bold] [{style}]{tag}[/{style}]  [dim]expected: {expected}[/dim]"
+    )
 
 
 def run_case(case: Case, *, verbose: bool) -> CaseOutcome:
@@ -234,17 +257,29 @@ def main(
 
     outcomes: list[CaseOutcome] = []
     for i, c in enumerate(cases, 1):
-        console.rule(f"[bold]{c.name}[/bold]  [dim]{c.agent.id} · {i}/{len(cases)}[/dim]")
+        console.rule(
+            f"[bold]{c.name}[/bold]  [dim]{c.agent.id} · {i}/{len(cases)}[/dim]"
+        )
         outcomes.append(run_case(c, verbose=verbose))
 
-    table = Table(title="Eval Summary", title_style="bold sky_blue1", show_header=True, header_style="bold")
+    table = Table(
+        title="Eval Summary",
+        title_style="bold sky_blue1",
+        show_header=True,
+        header_style="bold",
+    )
     table.add_column("Case", overflow="fold")
     table.add_column("Judge")
     table.add_column("Reliability")
     table.add_column("Status")
     for o in outcomes:
         status = "[green]PASS[/green]" if o.passed else "[red]FAIL[/red]"
-        table.add_row(o.name, _check_cell(o.judge_passed), _check_cell(o.reliability_passed), status)
+        table.add_row(
+            o.name,
+            _check_cell(o.judge_passed),
+            _check_cell(o.reliability_passed),
+            status,
+        )
 
     console.print()
     console.print(table)
