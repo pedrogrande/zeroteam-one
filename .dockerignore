@@ -35,11 +35,9 @@ tmp/
 .claude/
 
 # ---------------------------------------------------------------------------
-# Deploy 1 — exclude vendored + test-only content.
-# Keep project-docs/, knowledge/, evals/ in the image so
-# scripts/ingest_knowledge.py can embed docs into pgvector.
-# After ingestion (Deploy 2), add project-docs/, knowledge/, evals/
-# here to slim the image — vectors persist in the database.
+# Exclude vendored + test-only + doc content not needed at runtime.
+# evals/ is kept — scripts/ingest_knowledge.py imports from evals.dotenv.
 # ---------------------------------------------------------------------------
 agno/
 tests/
+project-docs/

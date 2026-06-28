@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Involvement Disclosure Generator</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3347;
+      --accent: #6c8ef7;
+      --accent2: #a78bfa;
+      --text: #e8eaf0;
+      --muted: #8b90a8;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-top: 16px;
+    }
+
+    header .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6c8ef7, #a78bfa);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 14px;
+    }
+
+    header h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    /* Mode selector */
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px;
+      margin-bottom: 28px;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .mode-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .mode-tab:hover:not(.active) {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Question card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .card p.desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.55;
+    }
+
+    /* Progress */
+    .progress-bar-wrap {
+      background: var(--surface2);
+      border-radius: 100px;
+      height: 4px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 100px;
+      transition: width 0.4s ease;
+    }
+    .progress-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    /* Options */
+    .options { display: flex; flex-direction: column; gap: 10px; }
+
+    .option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .option:hover {
+      border-color: var(--accent);
+      background: rgba(108, 142, 247, 0.08);
+    }
+
+    .option.selected {
+      border-color: var(--accent);
+      background: rgba(108, 142, 247, 0.12);
+    }
+
+    .option input[type="radio"] {
+      margin-top: 2px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .option .opt-text { font-size: 14px; line-height: 1.5; }
+    .option .opt-text strong { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+    .option .opt-text span { color: var(--muted); font-size: 13px; }
+
+    /* Textarea */
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.55;
+      resize: vertical;
+      min-height: 90px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { outline: none; border-color: var(--accent); }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus { outline: none; border-color: var(--accent); }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 7px;
+      font-weight: 500;
+    }
+
+    .input-group { margin-bottom: 14px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 12px 22px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--accent); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+    .btn-ghost:hover { color: var(--text); }
+
+    .btn-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    /* Result panel */
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .level-badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: 800;
+    }
+
+    .level-badge .lvl-num { font-size: 22px; line-height: 1; color: #fff; }
+    .level-badge .lvl-word { font-size: 8px; color: rgba(255,255,255,0.75); letter-spacing: 1px; text-transform: uppercase; }
+
+    .result-title h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .result-title p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .reasoning-box {
+      background: rgba(108, 142, 247, 0.07);
+      border: 1px solid rgba(108, 142, 247, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .reasoning-box strong { color: var(--text); display: block; margin-bottom: 5px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; }
+
+    .disclosure-block {
+      background: #0b0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #c9d1e0;
+      white-space: pre-wrap;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+    .copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+    .log-prompt {
+      background: rgba(251,191,36,0.07);
+      border: 1px solid rgba(251,191,36,0.25);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--warning);
+      line-height: 1.6;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .log-prompt strong { display: block; margin-bottom: 4px; }
+
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Log analyser */
+    .log-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* Level reference */
+    .level-ref-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .level-ref-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+
+    .level-ref-card .lrc-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .lrc-num {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(108,142,247,0.12);
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    .lrc-title { font-size: 14px; font-weight: 700; }
+    .lrc-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 500px) {
+      .mode-tabs { flex-direction: column; }
+      .btn-row { flex-direction: column; align-items: stretch; }
+      .btn-row .btn { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">Future's Edge</div>
+    <h1>AI Involvement<br>Disclosure Generator</h1>
+    <p>Assess and generate your AI Involvement Disclosure — using the 5-level framework. Honest disclosure, fast.</p>
+  </header>
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="switchMode('questionnaire')">📋 Guided Questions</button>
+    <button class="mode-tab" onclick="switchMode('log')">📄 Log Analyser</button>
+    <button class="mode-tab" onclick="switchMode('reference')">📖 Level Reference</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  PANEL 1 – GUIDED QUESTIONNAIRE                        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="panel-questionnaire" class="panel active">
+
+    <div class="card" id="q-step-meta">
+      <h2>About your work</h2>
+      <p class="desc">Fill in a few details about the piece you're disclosing — these will appear in your output block.</p>
+      <div class="input-group">
+        <label>Work title or brief description</label>
+        <input type="text" id="meta-title" placeholder="e.g. Policy draft, Blog post, Research summary…" />
+      </div>
+      <div class="input-group">
+        <label>Author name (or pseudonym)</label>
+        <input type="text" id="meta-author" placeholder="e.g. Alex Chen" />
+      </div>
+      <div class="btn-row">
+        <span></span>
+        <button class="btn btn-primary" onclick="startQuestionnaire()">Start assessment →</button>
+      </div>
+    </div>
+
+    <div id="q-flow" style="display:none">
+      <div class="progress-label" id="progress-label">Question 1 of 6</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar" style="width:16%"></div></div>
+
+      <!-- Q1 -->
+      <div class="card q-card" id="q1" style="display:block">
+        <h2>Did you use any generative AI tool at any point?</h2>
+        <p class="desc">This includes chatbots, writing assistants, image generators, coding AI, or any AI used for summarisation, translation, or ideation — even briefly.</p>
+        <div class="options">
+          <label class="option" onclick="selectOpt(this,'q1','no')">
+            <input type="radio" name="q1" value="no"> <div class="opt-text"><strong>No</strong><span>I used no generative AI tools at any stage of this work.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q1','yes')">
+            <input type="radio" name="q1" value="yes"> <div class="opt-text"><strong>Yes</strong><span>I used at least one generative AI tool at some point.</span></div>
+          </label>
+        </div>
+        <div class="btn-row">
+          <span></span>
+          <button class="btn btn-primary" onclick="nextQ(1)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="card q-card" id="q2" style="display:none">
+        <h2>What role did AI play during creation?</h2>
+        <p class="desc">Think about when and how AI entered the process — before, during, or only after you finished.</p>
+        <div class="options">
+          <label class="option" onclick="selectOpt(this,'q2','verify_only')">
+            <input type="radio" name="q2" value="verify_only"> <div class="opt-text"><strong>Only after I finished</strong><span>I used AI solely to check grammar, verify facts, or assess readability — not to generate or change content.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q2','assist')">
+            <input type="radio" name="q2" value="assist"> <div class="opt-text"><strong>During the process, to enhance my work</strong><span>The core thinking was mine; AI helped me refine, phrase, or improve what I had already created.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q2','collab')">
+            <input type="radio" name="q2" value="collab"> <div class="opt-text"><strong>Throughout — we worked together</strong><span>AI generated substantial portions; I directed, curated, challenged, and shaped the output iteratively.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q2','generated')">
+            <input type="radio" name="q2" value="generated"> <div class="opt-text"><strong>AI generated the primary content</strong><span>I provided a prompt or brief; AI produced the main draft; I reviewed and curated with minimal editing.</span></div>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="prevQ(2)">← Back</button>
+          <button class="btn btn-primary" onclick="nextQ(2)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="card q-card" id="q3" style="display:none">
+        <h2>Could you reproduce the substance of this work without AI?</h2>
+        <p class="desc">Imagine the AI never existed. Is the core of what you submitted still there — just rougher?</p>
+        <div class="options">
+          <label class="option" onclick="selectOpt(this,'q3','yes')">
+            <input type="radio" name="q3" value="yes"> <div class="opt-text"><strong>Yes</strong><span>The core ideas, structure, and argument are mine. AI made it better — not possible.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q3','partially')">
+            <input type="radio" name="q3" value="partially"> <div class="opt-text"><strong>Partially</strong><span>My thinking is present but AI substantially shaped the structure, depth, or content — the final form depends on the AI.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q3','no')">
+            <input type="radio" name="q3" value="no"> <div class="opt-text"><strong>No</strong><span>Without AI, this work would not exist in any recognisable form.</span></div>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="prevQ(3)">← Back</button>
+          <button class="btn btn-primary" onclick="nextQ(3)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="card q-card" id="q4" style="display:none">
+        <h2>How much did you direct, challenge, and curate the AI output?</h2>
+        <p class="desc">Think about the effort you invested in shaping, pushing back on, or refining what the AI produced.</p>
+        <div class="options">
+          <label class="option" onclick="selectOpt(this,'q4','heavy')">
+            <input type="radio" name="q4" value="heavy"> <div class="opt-text"><strong>Heavily</strong><span>I iterated extensively, challenged the AI's reasoning, restructured outputs, and all final judgments were mine.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q4','moderate')">
+            <input type="radio" name="q4" value="moderate"> <div class="opt-text"><strong>Moderately</strong><span>I directed the AI, reviewed outputs critically, and made meaningful edits — but did not deeply challenge or reconstruct.</span></div>
+          </label>
+          <label class="option" onclick="selectOpt(this,'q4','light')">
+            <input type="radio" name="q4" value="light"> <div class="opt-text"><strong>Lightly</strong><span>I reviewed the output and made minor corrections or selections, but left most of the AI's work intact.</span></div>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="prevQ(4)">← Back</button>
+          <button class="btn btn-primary" onclick="nextQ(4)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Q5 — description -->
+      <div class="card q-card" id="q5" style="display:none">
+        <h2>Describe how AI was used</h2>
+        <p class="desc">Write 1–3 sentences. What did you bring? What did the AI contribute? Be specific and honest — this becomes part of your disclosure.</p>
+        <textarea id="q5-text" placeholder="e.g. I developed the argument and structure independently. AI was used to refine phrasing and identify gaps in my reasoning."></textarea>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="prevQ(5)">← Back</button>
+          <button class="btn btn-primary" onclick="nextQ(5)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Q6 — extras -->
+      <div class="card q-card" id="q6" style="display:none">
+        <h2>Optional extras</h2>
+        <p class="desc">Add a session log link or AI involvement score if you have them. These strengthen your disclosure but are not required.</p>
+        <div class="input-group">
+          <label>Session log URL (optional)</label>
+          <input type="text" id="q6-log" placeholder="https://…  or leave blank" />
+        </div>
+        <div class="input-group">
+          <label>AI involvement score (optional)</label>
+          <input type="text" id="q6-score" placeholder="e.g. 40% human / 60% AI  or leave blank" />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="prevQ(6)">← Back</button>
+          <button class="btn btn-primary" onclick="generateResult()">Generate disclosure ✦</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div id="q-result" style="display:none"></div>
+
+  </div><!-- /panel-questionnaire -->
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  PANEL 2 – LOG ANALYSER                                -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="panel-log" class="panel">
+    <div class="card">
+      <h2>Session log analyser</h2>
+      <p class="desc">Paste your AI session log or a summary of your conversation below. The tool will analyse the pattern of prompts and responses to suggest an appropriate disclosure level.</p>
+      <div class="input-group">
+        <label>Work title</label>
+        <input type="text" id="log-title" placeholder="e.g. Policy brief draft" />
+      </div>
+      <div class="input-group">
+        <label>Author name</label>
+        <input type="text" id="log-author" placeholder="e.g. Alex Chen" />
+      </div>
+      <div class="input-group">
+        <label>Paste session log or summary</label>
+        <textarea id="log-text" style="min-height:180px" placeholder="Paste your AI conversation log here. You can include the full log or a representative excerpt.&#10;&#10;Tip: Most AI tools have an 'Export' or 'Share' option to copy the conversation."></textarea>
+      </div>
+      <div class="log-hint">💡 The analyser looks for patterns: proportion of AI-generated text, depth of human direction, number of revision cycles, and whether AI or human supplied the core ideas.</div>
+      <div class="btn-row">
+        <span></span>
+        <button class="btn btn-primary" onclick="analyseLog()">Analyse log →</button>
+      </div>
+    </div>
+    <div id="log-result" style="display:none"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  PANEL 3 – LEVEL REFERENCE                             -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="panel-reference" class="panel">
+    <div class="card">
+      <h2>The five levels at a glance</h2>
+      <p class="desc">The framework runs from Level 5 (entirely human-authored) to Level 1 (primarily AI-generated). Higher numbers = more human contribution.</p>
+    </div>
+    <div class="level-ref-grid">
+
+      <div class="level-ref-card">
+        <div class="lrc-header"><span class="lrc-num">Level 5</span><span class="lrc-title">Human-authored</span></div>
+        <div class="lrc-desc">No generative AI at any stage — including ideation, drafting, editing, or fact-checking. You conceived, structured, and wrote the entire piece yourself. Only traditional tools (spell-check, dictionaries) permitted.</div>
+      </div>
+
+      <div class="level-ref-card" style="border-left-color: #818cf8">
+        <div class="lrc-header"><span class="lrc-num" style="color:#818cf8;background:rgba(129,140,248,0.12)">Level 4</span><span class="lrc-title">AI-verified</span></div>
+        <div class="lrc-desc">You authored the work entirely. After completion, you used AI in a non-generative capacity — grammar checking, fact verification, or readability review. The AI did not generate content or suggest structural changes.</div>
+      </div>
+
+      <div class="level-ref-card" style="border-left-color: #a78bfa">
+        <div class="lrc-header"><span class="lrc-num" style="color:#a78bfa;background:rgba(167,139,250,0.12)">Level 3</span><span class="lrc-title">AI-assisted</span></div>
+        <div class="lrc-desc">The ideas, argument, and voice are yours. AI helped you refine phrasing, identify gaps, structure notes, or translate — but didn't originate the content. Remove the AI and the core work still exists in rougher form.</div>
+      </div>
+
+      <div class="level-ref-card" style="border-left-color: #c084fc">
+        <div class="lrc-header"><span class="lrc-num" style="color:#c084fc;background:rgba(192,132,252,0.12)">Level 2</span><span class="lrc-title">AI-collaborated</span></div>
+        <div class="lrc-desc">Genuine collaboration. AI generated substantial portions; you directed, challenged, curated, and shaped every iteration. Your intellectual contribution is real and significant — but the final product could not exist without the AI.</div>
+      </div>
+
+      <div class="level-ref-card" style="border-left-color: #e879f9">
+        <div class="lrc-header"><span class="lrc-num" style="color:#e879f9;background:rgba(232,121,249,0.12)">Level 1</span><span class="lrc-title">AI-generated with human curation</span></div>
+        <div class="lrc-desc">AI produced the primary content from a prompt or brief you provided. Your contribution was the quality of the brief, curation of the output, and judgment that it meets the required standard. Minimal post-generation editing.</div>
+      </div>
+
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>AI involvement score → level mapping</h2>
+      <p class="desc" style="margin-bottom:14px">Where your tool provides a human/AI percentage split, use this as a guide (not a rule).</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="color:var(--muted);text-align:left">
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">Score (% human)</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">Likely level</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:9px 10px;border-bottom:1px solid var(--border)">90–100%</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--success)">Level 5 or 4</td></tr>
+          <tr><td style="padding:9px 10px;border-bottom:1px solid var(--border)">70–89%</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--accent)">Level 4 or 3</td></tr>
+          <tr><td style="padding:9px 10px;border-bottom:1px solid var(--border)">40–69%</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--accent2)">Level 3 or 2</td></tr>
+          <tr><td style="padding:9px 10px;border-bottom:1px solid var(--border)">20–39%</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:#c084fc">Level 2 or 1</td></tr>
+          <tr><td style="padding:9px 10px">0–19%</td><td style="padding:9px 10px;color:#e879f9">Level 1</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    Built for <a href="#">Future's Edge</a> · AI Involvement Disclosure Policy v1.0 · Open source · <a href="#">View on GitHub</a>
+  </footer>
+
+</div><!-- /container -->
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const answers = {};
+let currentQ = 0;
+const totalQ = 6;
+
+// ─── Mode switching ───────────────────────────────────────────────────────────
+function switchMode(mode) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + mode).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ─── Option selection ─────────────────────────────────────────────────────────
+function selectOpt(el, name, val) {
+  document.querySelectorAll('[onclick*="' + name + '"]').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  answers[name] = val;
+}
+
+// ─── Questionnaire flow ───────────────────────────────────────────────────────
+function startQuestionnaire() {
+  document.getElementById('q-step-meta').style.display = 'none';
+  document.getElementById('q-flow').style.display = 'block';
+  showQ(1);
+}
+
+function showQ(n) {
+  document.querySelectorAll('.q-card').forEach(c => c.style.display = 'none');
+  const card = document.getElementById('q' + n);
+  if (card) card.style.display = 'block';
+  currentQ = n;
+  const steps = getVisibleSteps();
+  const pos = steps.indexOf(n) + 1;
+  document.getElementById('progress-label').textContent = 'Question ' + pos + ' of ' + steps.length;
+  document.getElementById('progress-bar').style.width = (pos / steps.length * 100) + '%';
+}
+
+function getVisibleSteps() {
+  if (answers.q1 === 'no') return [1, 5, 6];
+  if (answers.q2 === 'verify_only') return [1, 2, 5, 6];
+  return [1, 2, 3, 4, 5, 6];
+}
+
+function nextQ(from) {
+  if (from === 1) {
+    if (!answers.q1) { alert('Please select an option.'); return; }
+    if (answers.q1 === 'no') { showQ(5); return; }
+    showQ(2); return;
+  }
+  if (from === 2) {
+    if (!answers.q2) { alert('Please select an option.'); return; }
+    if (answers.q2 === 'verify_only') { showQ(5); return; }
+    showQ(3); return;
+  }
+  if (from === 3) {
+    if (!answers.q3) { alert('Please select an option.'); return; }
+    showQ(4); return;
+  }
+  if (from === 4) {
+    if (!answers.q4) { alert('Please select an option.'); return; }
+    showQ(5); return;
+  }
+  if (from === 5) {
+    showQ(6); return;
+  }
+  if (from === 6) {
+    generateResult(); return;
+  }
+}
+
+function prevQ(from) {
+  if (from === 2) { showQ(1); return; }
+  if (from === 3) { showQ(2); return; }
+  if (from === 4) { showQ(3); return; }
+  if (from === 5) {
+    if (answers.q1 === 'no' || answers.q2 === 'verify_only') { showQ(answers.q1 === 'no' ? 1 : 2); return; }
+    showQ(4); return;
+  }
+  if (from === 6) { showQ(5); return; }
+}
+
+// ─── Scoring logic ────────────────────────────────────────────────────────────
+function computeLevel() {
+  if (answers.q1 === 'no') return { level: 5, label: 'Human-authored', reasoning: 'You indicated no generative AI was used at any stage. This is a Level 5 — Human-authored disclosure.' };
+
+  if (answers.q2 === 'verify_only') return { level: 4, label: 'AI-verified', reasoning: 'You used AI only after completing the work — for checking, not generating. The intellectual work is entirely yours. This is a Level 4 — AI-verified disclosure.' };
+
+  if (answers.q2 === 'generated' || (answers.q3 === 'no' && answers.q4 === 'light')) {
+    return { level: 1, label: 'AI-generated with human curation', reasoning: 'AI produced the primary content from your prompt. Your contribution was in the brief, curation, and judgment of quality. This is a Level 1 — AI-generated with human curation disclosure.' };
+  }
+
+  if (answers.q2 === 'collab' || (answers.q3 === 'partially' && answers.q4 !== 'light') || (answers.q3 === 'no' && answers.q4 !== 'light')) {
+    if (answers.q4 === 'light') {
+      return { level: 1, label: 'AI-generated with human curation', reasoning: 'AI contributed substantially and your curation was light. The balance of cognitive work sits with the AI. This is a Level 1 — AI-generated with human curation disclosure.' };
+    }
+    return { level: 2, label: 'AI-collaborated', reasoning: 'Both you and AI contributed meaningfully. You directed, challenged, and curated; AI generated substantial portions. The final product is a genuine collaboration. This is a Level 2 — AI-collaborated disclosure.' };
+  }
+
+  // q2 === 'assist'
+  if (answers.q3 === 'yes') {
+    if (answers.q4 === 'heavy' || answers.q4 === 'moderate') {
+      return { level: 3, label: 'AI-assisted', reasoning: 'The core intellectual work — ideas, argument, and voice — is yours. AI enhanced and refined it, but didn't originate it. You could reproduce the substance independently. This is a Level 3 — AI-assisted disclosure.' };
+    }
+    return { level: 3, label: 'AI-assisted', reasoning: 'Your core thinking drove the work; AI played a supporting role in refinement. This is a Level 3 — AI-assisted disclosure.' };
+  }
+
+  return { level: 3, label: 'AI-assisted', reasoning: 'Based on your answers, AI enhanced your work but the core intellectual contribution is yours. This is a Level 3 — AI-assisted disclosure.' };
+}
+
+// ─── Generate result ──────────────────────────────────────────────────────────
+function generateResult() {
+  const title = document.getElementById('meta-title').value.trim() || 'Untitled work';
+  const author = document.getElementById('meta-author').value.trim() || '[Author]';
+  const description = document.getElementById('q5-text').value.trim() || 'No description provided.';
+  const logUrl = document.getElementById('q6-log').value.trim();
+  const score = document.getElementById('q6-score').value.trim();
+  const { level, label, reasoning } = computeLevel();
+  const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  renderResult('q-result', { title, author, description, logUrl, score, level, label, reasoning, today });
+}
+
+// ─── Log analyser ─────────────────────────────────────────────────────────────
+function analyseLog() {
+  const log = document.getElementById('log-text').value.trim();
+  const title = document.getElementById('log-title').value.trim() || 'Untitled work';
+  const author = document.getElementById('log-author').value.trim() || '[Author]';
+  if (!log) { alert('Please paste a session log first.'); return; }
+
+  const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const { level, label, reasoning } = analyseLogText(log);
+
+  const description = level <= 2
+    ? 'I directed the structure and challenged the AI's outputs. AI generated substantial draft content. All final decisions were mine.'
+    : level === 3
+    ? 'I developed the core ideas and argument. AI was used to refine and enhance the work I had already created.'
+    : level === 4
+    ? 'I completed the work independently. AI was used after completion for verification purposes only.'
+    : 'No generative AI involvement detected in the provided log.';
+
+  renderResult('log-result', { title, author, description, logUrl: '', score: '', level, label, reasoning, today, fromLog: true });
+}
+
+function analyseLogText(log) {
+  const lower = log.toLowerCase();
+  const words = log.split(/\s+/).length;
+
+  // Heuristic signals
+  const humanTurns = (log.match(/(human|user|you|me):/gi) || []).length;
+  const aiTurns = (log.match(/(assistant|ai|gpt|claude|gemini|perplexity):/gi) || []).length;
+  const reviseCues = (lower.match(/\b(rewrite|revise|change|edit|improve|refine|rephrase|restructure|try again)\b/g) || []).length;
+  const challengeCues = (lower.match(/\b(disagree|wrong|not quite|actually|but|however|push back|challenge|reconsider)\b/g) || []).length;
+  const ideaCues = (lower.match(/\b(i think|my view|i believe|my argument|i developed|my idea|i wrote|i drafted)\b/g) || []).length;
+  const generateCues = (lower.match(/\b(generate|write for me|draft this|create a|produce a|write a)\b/g) || []).length;
+  const verifyOnly = (lower.match(/\b(check|verify|grammar|spelling|fact.?check|readability|proofread)\b/g) || []).length;
+
+  // Very short log — can't determine much
+  if (words < 50) {
+    return { level: 3, label: 'AI-assisted', reasoning: 'The log provided is short. Based on available signals, a Level 3 — AI-assisted disclosure is suggested. Please review and adjust if needed.' };
+  }
+
+  // Strong human-idea signals with low generation cues
+  if (ideaCues >= 3 && generateCues === 0 && reviseCues < 2) {
+    if (verifyOnly >= 2) {
+      return { level: 4, label: 'AI-verified', reasoning: 'The log shows you primarily used AI for checking and verification after producing the work yourself. This signals Level 4 — AI-verified.' };
+    }
+    return { level: 3, label: 'AI-assisted', reasoning: 'The log shows strong human ideation and low AI generation signals. AI appears to have assisted rather than originated. This signals Level 3 — AI-assisted.' };
+  }
+
+  // Heavy generation cues with light revision
+  if (generateCues >= 3 && reviseCues <= 1 && challengeCues === 0) {
+    return { level: 1, label: 'AI-generated with human curation', reasoning: 'The log shows significant generation prompts with minimal revision or challenge. AI appears to have produced primary content. This signals Level 1 — AI-generated with human curation.' };
+  }
+
+  // Active collaboration signals
+  if ((reviseCues >= 3 || challengeCues >= 2) && (humanTurns >= 3 || aiTurns >= 3)) {
+    return { level: 2, label: 'AI-collaborated', reasoning: 'The log shows active back-and-forth: revision cycles, challenge cues, and iterative direction. Both parties contributed substantively. This signals Level 2 — AI-collaborated.' };
+  }
+
+  // Default to assisted
+  return { level: 3, label: 'AI-assisted', reasoning: 'Based on the log patterns, a Level 3 — AI-assisted disclosure is most likely. The AI enhanced your work without originating the core content. Review and adjust if needed.' };
+}
+
+// ─── Render result ────────────────────────────────────────────────────────────
+function renderResult(targetId, { title, author, description, logUrl, score, level, label, reasoning, today, fromLog }) {
+  const logLine = logUrl ? logUrl : (level <= 2 ? '[Publish recommended — see prompt below]' : 'Not applicable');
+  const scoreLine = score || 'Not available';
+
+  const block = [
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    'AI INVOLVEMENT DISCLOSURE',
+    '',
+    'Level: ' + level + ' — ' + label,
+    '',
+    'Description:',
+    description,
+    '',
+    'Session log:',
+    logLine,
+    '',
+    'AI involvement score:',
+    scoreLine,
+    '',
+    'Work: ' + title,
+    'Submitted by: ' + author,
+    'Date: ' + today,
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+  ].join('\n');
+
+  const needsLog = level <= 2 && !logUrl;
+
+  const html = \`
+    <div class="card" id="result-card">
+      <div class="result-header">
+        <div class="level-badge">
+          <span class="lvl-num">\${level}</span>
+          <span class="lvl-word">Level</span>
+        </div>
+        <div class="result-title">
+          <h2>\${label}</h2>
+          <p>\${title} · \${author} · \${today}</p>
+        </div>
+      </div>
+
+      <div class="reasoning-box">
+        <strong>Why this level?</strong>
+        \${reasoning}
+        \${fromLog ? '<br><br><em>Note: Log analysis is heuristic. Please review and adjust the level if it doesn't match your experience of the work.</em>' : ''}
+      </div>
+
+      \${needsLog ? \`
+      <div class="log-prompt" style="display:block">
+        <strong>📎 Consider publishing your session log</strong>
+        For Level \${level} work, publishing your session log is \${level === 1 ? 'required in governance contexts and' : ''} strongly encouraged. It demonstrates the quality of your direction and curation, and supports the integrity of your disclosure.
+        Most AI tools have an Export or Share option. Upload the log alongside your work.
+      </div>\` : ''}
+
+      <div class="disclosure-block" id="disclosure-text">\${block}<button class="copy-btn" id="copy-btn" onclick="copyBlock()">Copy</button></div>
+
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="copyBlock()">📋 Copy disclosure block</button>
+        <button class="btn btn-secondary" onclick="resetTool()">↩ Start over</button>
+      </div>
+    </div>
+  \`;
+
+  const target = document.getElementById(targetId);
+  target.innerHTML = html;
+  target.style.display = 'block';
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── Copy to clipboard ────────────────────────────────────────────────────────
+function copyBlock() {
+  const el = document.getElementById('disclosure-text');
+  const text = el.innerText.replace('Copy', '').replace('Copied!', '').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
+function resetTool() {
+  Object.keys(answers).forEach(k => delete answers[k]);
+  document.getElementById('meta-title').value = '';
+  document.getElementById('meta-author').value = '';
+  document.getElementById('q5-text').value = '';
+  document.getElementById('q6-log').value = '';
+  document.getElementById('q6-score').value = '';
+  document.getElementById('q-result').style.display = 'none';
+  document.getElementById('q-flow').style.display = 'none';
+  document.getElementById('q-step-meta').style.display = 'block';
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+}
+</script>
+</body>
+</html>

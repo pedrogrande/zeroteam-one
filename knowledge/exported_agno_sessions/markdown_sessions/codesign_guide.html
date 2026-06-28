@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Co-Design Session Guide</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+      --accent-muted: #2d1f5e;
+      --green: #059669;
+      --green-muted: #052e1c;
+      --amber: #d97706;
+      --amber-muted: #3a1f00;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #2d3148;
+      --tag-bg: #1e1a3a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #0f1117 0%, #1a0a3a 50%, #0a1a2e 100%);
+      padding: 80px 24px 64px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 60% 40%, rgba(124,58,237,0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-light);
+      background: var(--accent-muted);
+      border: 1px solid var(--accent);
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #e2e8f0 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 580px;
+      margin: 0 auto 32px;
+    }
+    .hero-meta {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .hero-meta span {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hero-meta .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      display: inline-block;
+    }
+
+    /* Nav */
+    .toc {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      justify-content: center;
+    }
+    .toc a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 14px 18px;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .toc a:hover { color: var(--accent-light); border-bottom-color: var(--accent); }
+
+    /* Layout */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section {
+      padding: 64px 0 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    section:last-child { border-bottom: none; }
+
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-light);
+      margin-bottom: 10px;
+    }
+    h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 16px;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent-light);
+      margin: 28px 0 10px;
+    }
+    p { color: var(--text-muted); margin-bottom: 16px; }
+    p strong { color: var(--text); }
+
+    /* Benefit cards */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 28px;
+    }
+    .benefit-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .benefit-card:hover { border-color: var(--accent); }
+    .benefit-icon {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+    .benefit-card h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .benefit-card p {
+      font-size: 0.85rem;
+      margin: 0;
+    }
+
+    /* Fit table */
+    .fit-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      font-size: 0.9rem;
+    }
+    .fit-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .fit-table th.yes { color: #34d399; }
+    .fit-table th.no { color: #f87171; }
+    .fit-table td {
+      padding: 11px 16px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .fit-table tr:last-child td { border-bottom: none; }
+    .fit-table td.yes::before { content: '✓  '; color: #34d399; font-weight: 700; }
+    .fit-table td.no::before { content: '✗  '; color: #f87171; font-weight: 700; }
+
+    /* Use cases */
+    .usecase-list {
+      list-style: none;
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .usecase-list li {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .usecase-list li::before {
+      content: '→';
+      color: var(--accent-light);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Phase steps */
+    .phases {
+      margin-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+    }
+    .phases::before {
+      content: '';
+      position: absolute;
+      left: 22px;
+      top: 40px;
+      bottom: 40px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), var(--accent-muted));
+    }
+    .phase {
+      display: flex;
+      gap: 20px;
+      padding: 20px 0;
+      position: relative;
+    }
+    .phase-number {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--accent-muted);
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: var(--accent-light);
+      flex-shrink: 0;
+      z-index: 1;
+    }
+    .phase-body { flex: 1; padding-top: 8px; }
+    .phase-body h3 { margin: 0 0 6px; font-size: 1rem; color: var(--text); }
+    .phase-body p { font-size: 0.88rem; margin: 0 0 10px; }
+    .phase-prompts {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .prompt-example {
+      background: var(--surface2);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: var(--text);
+      font-style: italic;
+    }
+    .prompt-example::before {
+      content: '" ';
+      color: var(--accent-light);
+      font-weight: 700;
+      font-style: normal;
+    }
+    .prompt-example::after {
+      content: ' "';
+      color: var(--accent-light);
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    /* Prep checklist */
+    .prep-list {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .prep-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .prep-item:hover { border-color: var(--accent); }
+    .prep-q {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-light);
+      background: var(--accent-muted);
+      border-radius: 4px;
+      padding: 3px 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .prep-body h4 { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .prep-body p { font-size: 0.83rem; margin: 0; }
+
+    /* Retro */
+    .retro-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .retro-card {
+      border-radius: 10px;
+      padding: 18px;
+      border: 1px solid var(--border);
+    }
+    .retro-card.liked { background: linear-gradient(135deg, #052e1c, #0a1a12); border-color: #065f46; }
+    .retro-card.learned { background: linear-gradient(135deg, #1e1a3a, #0f1117); border-color: var(--accent); }
+    .retro-card.lacked { background: linear-gradient(135deg, #3a1f00, #1a0f00); border-color: #92400e; }
+    .retro-card.longed { background: linear-gradient(135deg, #1a1040, #0f1117); border-color: #4c1d95; }
+    .retro-card h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .retro-card.liked h4 { color: #34d399; }
+    .retro-card.learned h4 { color: var(--accent-light); }
+    .retro-card.lacked h4 { color: #fbbf24; }
+    .retro-card.longed h4 { color: #c4b5fd; }
+    .retro-card p { font-size: 0.82rem; margin: 0; }
+    .retro-prompt {
+      background: var(--surface2);
+      border-left: 3px solid var(--green);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin-top: 20px;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    .retro-prompt strong { color: #34d399; }
+
+    /* Callout */
+    .callout {
+      background: linear-gradient(135deg, var(--accent-muted), #1a0a3a);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin: 28px 0;
+    }
+    .callout p { color: var(--text); margin: 0; font-size: 1rem; }
+    .callout strong { color: var(--accent-light); }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+    }
+    footer strong { color: var(--accent-light); }
+
+    @media (max-width: 600px) {
+      .toc { justify-content: flex-start; }
+      .phases::before { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-label">Interaction Guide</div>
+  <h1>The Co-Design Session Method</h1>
+  <p>How to use AI as a thinking partner — not just a tool — and leave every session richer than you started.</p>
+  <div class="hero-meta">
+    <span><span class="dot"></span> Based on real session patterns</span>
+    <span><span class="dot"></span> 5-phase method</span>
+    <span><span class="dot"></span> Suitable for knowledge workers</span>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav class="toc">
+  <a href="#benefits">Benefits</a>
+  <a href="#fit">Is it for you?</a>
+  <a href="#prep">Preparation</a>
+  <a href="#method">The Method</a>
+  <a href="#retro">Retro</a>
+</nav>
+
+<!-- Benefits -->
+<section id="benefits">
+  <div class="container">
+    <div class="section-label">Why it works</div>
+    <h2>What you can expect</h2>
+    <p>This style is designed to leave you <strong>richer than you started</strong> — not just with an output, but with better thinking. The session itself is the value, not just what it produces.</p>
+
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-icon">🏗️</div>
+        <h4>Production-ready artefacts</h4>
+        <p>Schemas, frameworks, templates, code, and documentation that go directly into real work — not polished generics.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🔭</div>
+        <h4>New framings & perspectives</h4>
+        <p>The session surfaces angles and constraints you hadn't considered before you typed your first message.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">✍️</div>
+        <h4>Ideas made public-ready</h4>
+        <p>Loosely held concepts get structured into communicable form — often without you asking for it explicitly.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🧪</div>
+        <h4>Pre-tested decisions</h4>
+        <p>Weaknesses in your logic get caught before you build or commit, not after. The session stress-tests your thinking.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🔗</div>
+        <h4>Cross-domain synthesis</h4>
+        <p>Ideas from adjacent fields surface connections your domain peers would miss — and your sessions become more than the sum of their parts.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🧠</div>
+        <h4>Meta-insight about your thinking</h4>
+        <p>The retro at the end of each session extracts what you learned about the problem — and about yourself.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Fit -->
+<section id="fit">
+  <div class="container">
+    <div class="section-label">Suitability</div>
+    <h2>Is this style right for you?</h2>
+    <p>Use the co-design style when your problem has <strong>depth, ambiguity, or stakes</strong>. Avoid it for simple lookups — a regular query is faster and produces the same result.</p>
+
+    <table class="fit-table">
+      <thead>
+        <tr>
+          <th class="yes">✓ Good fit</th>
+          <th class="no">✗ Poor fit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="yes">You're designing something new</td>
+          <td class="no">You need a quick fact or definition</td>
+        </tr>
+        <tr>
+          <td class="yes">You have context and knowledge to bring</td>
+          <td class="no">You have no prior knowledge of the domain</td>
+        </tr>
+        <tr>
+          <td class="yes">You want to stress-test your thinking</td>
+          <td class="no">You just need a draft written fast</td>
+        </tr>
+        <tr>
+          <td class="yes">The output will inform real decisions</td>
+          <td class="no">The question has one clear answer</td>
+        </tr>
+        <tr>
+          <td class="yes">You can invest 20+ minutes in the session</td>
+          <td class="no">You have 2 minutes</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Example use cases</h3>
+    <ul class="usecase-list">
+      <li>Designing a product, curriculum, or workflow from scratch</li>
+      <li>Evaluating technical architecture options before committing</li>
+      <li>Developing a framework or methodology you'll publish or teach</li>
+      <li>Turning a rough idea into a structured, shareable document</li>
+      <li>Decomposing a complex task with risk mapping</li>
+      <li>Critiquing an artefact you've already produced</li>
+      <li>Running a retrospective on a project or system</li>
+      <li>Exploring a domain before writing or presenting</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Prep -->
+<section id="prep">
+  <div class="container">
+    <div class="section-label">Before you start</div>
+    <h2>Pre-session preparation</h2>
+    <p>Work through these questions before you type your first message. You don't need to write them down — but consciously answering them shapes every prompt that follows.</p>
+
+    <div class="prep-list">
+      <div class="prep-item">
+        <span class="prep-q">Q1</span>
+        <div class="prep-body">
+          <h4>What is my desired output?</h4>
+          <p>Be specific: a schema, a decision, a critique, a structured list, a document? Knowing the output type shapes how you open the session.</p>
+        </div>
+      </div>
+      <div class="prep-item">
+        <span class="prep-q">Q2</span>
+        <div class="prep-body">
+          <h4>What does a great outcome look like?</h4>
+          <p>Set your own success criteria before you start — otherwise you won't know when to stop iterating. <em>"A great outcome is something I could hand to a colleague tomorrow."</em></p>
+        </div>
+      </div>
+      <div class="prep-item">
+        <span class="prep-q">Q3</span>
+        <div class="prep-body">
+          <h4>What context does the AI need that it won't have?</h4>
+          <p>Think across three layers: <strong>project context</strong> (what you're building and why), <strong>constraints</strong> (stack, audience, budget, non-negotiables), and <strong>your current position</strong> (what you know and what the gap is).</p>
+        </div>
+      </div>
+      <div class="prep-item">
+        <span class="prep-q">Q4</span>
+        <div class="prep-body">
+          <h4>Is this a divergent or convergent session?</h4>
+          <p>Divergent: explore widely and generate options. Convergent: narrow toward a decision or finished artefact. Mixed sessions work — but you need to consciously shift between modes.</p>
+        </div>
+      </div>
+      <div class="prep-item">
+        <span class="prep-q">Q5</span>
+        <div class="prep-body">
+          <h4>What is out of scope?</h4>
+          <p>Knowing what to exclude is as important as knowing what to include. Stating it explicitly prevents the session from drifting.</p>
+        </div>
+      </div>
+      <div class="prep-item">
+        <span class="prep-q">Q6</span>
+        <div class="prep-body">
+          <h4>Who is the audience for the output?</h4>
+          <p>Outputs shaped for yourself look different from those shaped for a client, student, or executive. Declare this upfront — it changes the tone, structure, and depth of every response.</p>
+        </div>
+      </div>
+      <div class="prep-item">
+        <span class="prep-q">Q7</span>
+        <div class="prep-body">
+          <h4>What comes next after this session?</h4>
+          <p>If it feeds into a build, a presentation, or another session — say so. The AI will structure outputs to serve what comes next.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Method -->
+<section id="method">
+  <div class="container">
+    <div class="section-label">The 5-phase method</div>
+    <h2>Priming Before Producing</h2>
+    <p>Most people skip straight to Phase 5. They ask for the output before the context exists, get a generic answer, and conclude the tool isn't that useful. <strong>Priming is the differentiator.</strong></p>
+
+    <div class="callout">
+      <p>The quality of your Phase 5 output is almost entirely determined by the quality of your Phase 1–4 conversation. Think of it like warming up clay before sculpting — you don't start shaping until the material is ready.</p>
+    </div>
+
+    <div class="phases">
+
+      <div class="phase">
+        <div class="phase-number">1</div>
+        <div class="phase-body">
+          <h3>Prime the Field</h3>
+          <p>Build shared understanding <em>before</em> revealing your purpose. Short, scene-setting questions that warm up the domain without tipping your hand. Keep prompts to one sentence — no explanation of why you're asking.</p>
+          <div class="phase-prompts">
+            <div class="prompt-example">Tell me about the challenges businesses face when implementing AI.</div>
+            <div class="prompt-example">How does lack of trust impact the business benefits of AI?</div>
+            <div class="prompt-example">What does the research say about this?</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-number">2</div>
+        <div class="phase-body">
+          <h3>Reveal Your Direction</h3>
+          <p>Introduce what you're actually building — your existing ideas, document, or framework — and ask what's missing or weak. The AI is now responding to your specific work against a fully primed backdrop.</p>
+          <div class="phase-prompts">
+            <div class="prompt-example">I'm working on a trust framework for AI adoption. Here's what I have. What am I missing?</div>
+            <div class="prompt-example">Here's a document I've produced. Analyse it — strengths, weaknesses, and what you'd improve.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-number">3</div>
+        <div class="phase-body">
+          <h3>Probe Weak Spots</h3>
+          <p>Anything underdeveloped gets its own focused thread. Use the AI as an intellectual sparring partner — probing weakness before committing is one of the highest-leverage moves in this style.</p>
+          <div class="phase-prompts">
+            <div class="prompt-example">That third point feels thin. Let's explore it further.</div>
+            <div class="prompt-example">What's the strongest argument against this position?</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-number">4</div>
+        <div class="phase-body">
+          <h3>Apply Alternative Lenses</h3>
+          <p>Deliberately shift the frame to uncover non-obvious insights. Each lens is a constraint that forces new connections — this is where unexpected insights emerge.</p>
+          <div class="phase-prompts">
+            <div class="prompt-example">How would a sceptical CFO read this?</div>
+            <div class="prompt-example">Apply a systems thinking lens to this problem.</div>
+            <div class="prompt-example">What does this look like from the employee's perspective rather than the organisation's?</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-number">5</div>
+        <div class="phase-body">
+          <h3>Produce the Output</h3>
+          <p>Only now do you ask for the thing you came for. You're not asking the AI to generate from scratch — you're asking it to crystallise something you've already built together.</p>
+          <div class="phase-prompts">
+            <div class="prompt-example">Now write the section on trust using everything we've discussed.</div>
+            <div class="prompt-example">Turn this into a structured table I can use in my presentation.</div>
+            <div class="prompt-example">Rewrite the document with your improvement recommendations incorporated.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Retro -->
+<section id="retro">
+  <div class="container">
+    <div class="section-label">Closing the loop</div>
+    <h2>The Session Retrospective</h2>
+    <p>Most people close the tab when they get the output they came for. The retro is what separates a good session from a great one. It extracts meta-value — the reframes, tensions, and implications that the session produced but never explicitly surfaced.</p>
+
+    <div class="retro-grid">
+      <div class="retro-card liked">
+        <h4>👍 Liked</h4>
+        <p>What worked well? What outputs or exchanges were most valuable?</p>
+      </div>
+      <div class="retro-card learned">
+        <h4>💡 Learned</h4>
+        <p>What do you now understand that you didn't before? What surprised you?</p>
+      </div>
+      <div class="retro-card lacked">
+        <h4>⚠️ Lacked</h4>
+        <p>What was missing? Where did the session fall short or go shallow?</p>
+      </div>
+      <div class="retro-card longed">
+        <h4>🔭 Longed for</h4>
+        <p>What do you wish had happened? What would make the next session better?</p>
+      </div>
+    </div>
+
+    <div class="retro-prompt">
+      <strong>The single most valuable closing prompt:</strong><br/>
+      "What did we learn in this session? What are the key insights and what would I do differently next time?"
+    </div>
+
+    <p style="margin-top:20px;">This question costs 30 seconds and routinely produces the most valuable sentence in the entire transcript. It also seeds the opening context for your next session on the same topic.</p>
+  </div>
+</section>
+
+<footer>
+  <p>The Co-Design Session Method &nbsp;·&nbsp; Based on the interaction patterns of <strong>Pete Argent</strong>, RMIT University &amp; Zero Team &nbsp;·&nbsp; 2026</p>
+</footer>
+
+</body>
+</html>

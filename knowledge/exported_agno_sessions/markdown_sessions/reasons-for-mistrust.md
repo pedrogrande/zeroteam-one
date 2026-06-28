@@ -1,0 +1,41 @@
+# Reasons for Mistrust
+
+## The Core Numbers
+
+Australia's trust position globally is striking  [techpolicy](https://techpolicy.au/news/earning-trust):
+
+- Just **1% of Australians** have complete trust in AI
+- **44%** say they have little to no trust it will be used responsibly
+- Only **30%** believe AI's benefits outweigh its risks — the **lowest of any country surveyed** globally
+- **81%** are concerned about AI risks, and **64%** believe it is moving too fast  [forbes.com](https://www.forbes.com.au/news/innovation/australians-are-racing-to-adopt-ai-theres-just-one-big-catch/)
+
+## Low AI Literacy
+
+A significant driver is that Australians simply don't understand AI well enough to trust it  [kpmg](https://kpmg.com/au/en/insights/artificial-intelligence-ai/trust-in-ai-global-insights-2025.html):
+
+- Only **24% of Australians** have undertaken any AI-related training or education, versus 39% globally
+- Over **60% report low AI knowledge**, compared to 48% globally
+- Just **48%** believe they have the skills to use AI tools effectively, versus 60% globally
+- Critically, Australians **rank lowest globally in their interest in learning more about AI** — suggesting passive disengagement rather than active opposition  [kpmg](https://kpmg.com/au/en/insights/artificial-intelligence-ai/trust-in-ai-global-insights-2025.html)
+
+## Specific Fears Driving Distrust
+
+Multiple surveys consistently surface the same concerns  [minderoo](https://www.minderoo.org/stories/ai-research-feb-2026/):
+
+- **Job losses** — ANU polling shows most Australians expect more jobs to be destroyed than created; 61% believe AI will eliminate more jobs than it creates  [news.uq.edu](https://news.uq.edu.au/2021-06-11-australians-lack-trust-artificial-intelligence)
+- **Privacy breaches** — 57% cite privacy concerns as the top barrier to AI use; 54% of those averse to AI agents specifically distrust them with personal data  [news.uq.edu](https://news.uq.edu.au/2026-01-australias-ai-safety-gap-4000-times-bigger-you-think)
+- **Criminal misuse** — deepfake fraud and image-based abuse have had a direct chilling effect on public sentiment; nearly 6 in 10 Australians report seeing AI-generated content they couldn't distinguish from reality  [minderoo](https://www.minderoo.org/stories/ai-research-feb-2026/)
+- **Distrust of AI companies** — only **23% of Australians trust tech companies** to ensure AI safety, and 32% cite "I don't trust the companies making AI" as a barrier  [news.uq.edu](https://news.uq.edu.au/2026-01-australias-ai-safety-gap-4000-times-bigger-you-think)
+- **Cybersecurity threats** — **77% of Australians** rate AI misuse as a major national security threat, above even economic crises  [theconversation](https://theconversation.com/australians-see-ai-as-leading-threat-to-people-and-businesses-survey-270794)
+
+## Governance Vacuum
+
+Australians aren't simply fearful — they're specifically waiting for accountability structures that haven't arrived  [news.uq.edu](https://news.uq.edu.au/2026-01-australias-ai-safety-gap-4000-times-bigger-you-think):
+
+- **83%** believe regulation already lags behind the technology
+- **74%** worry the government will *under*-regulate AI, not over-regulate it — meaning contrary to what tech industry lobbyists claim, Australians see more regulation as trust-building, not stifling
+- The gap between government AI plans and public awareness is stark — most Australians remain unaware of what the government is actually doing on AI policy  [minderoo](https://www.minderoo.org/stories/ai-research-feb-2026/)
+
+## The "Sceptical Adopter" Paradox
+
+Australia has been dubbed the world's leading nation of **"sceptical adopters"**  [forbes.com](https://www.forbes.com.au/news/innovation/australians-are-racing-to-adopt-ai-theres-just-one-big-catch/) — people who use AI tools daily while remaining fundamentally distrustful of the systems behind them. AI strategist Brooke Wright describes it as an AI "PR crisis" with "MLM vibes" — the sense that AI is being *sold* to Australians rather than developed *with* them  [ia.acs.org](https://ia.acs.org.au/article/2025/aussies-more-scared-than-excited-about-ai.html). As one commentator put it: *"Australians don't hate AI — they just don't trust what they can't see, understand, or control"*  [ia.acs.org](https://ia.acs.org.au/article/2025/aussies-more-scared-than-excited-about-ai.html).

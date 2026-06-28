@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Structural Trust Framework</title>
+<style>
+/* Theme Variables */
+:root {
+  --font-family-display: Arial, sans-serif;
+  --font-weight-display: 600;
+  --font-family-content: Arial, sans-serif;
+  --font-weight-content: 400;
+  --font-size-content: 16px;
+  --line-height-content: 1.4;
+}
+
+/* DARK THEME */
+body.theme-dark {
+  --color-bg-base: #0f172a;
+  --color-bg-elevated: #020617;
+  --color-bg-surface: #1e293b;
+  --color-bg-muted: #334155;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-accent: #38bdf8;
+  --color-primary: #38bdf8;
+  --color-primary-foreground: #0f172a;
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family-content);
+  font-weight: var(--font-weight-content);
+  font-size: var(--font-size-content);
+  line-height: var(--line-height-content);
+  overflow-x: hidden;
+}
+
+/* Slide Container */
+.slide {
+  width: 960px;
+  height: 540px;
+  margin: 0 auto 20px;
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Layout Utilities */
+.row { flex-direction: row; }
+.col { flex-direction: column; }
+.center {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.space-between { justify-content: space-between; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.fill-width { flex: 1; }
+.fill-height { flex: 1; display: flex; flex-direction: column; }
+
+/* Spacing */
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+.gap-xl { gap: 2rem; }
+.gap-2xl { gap: 3rem; }
+
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.p-8 { padding: 2rem; }
+.p-12 { padding: 3rem; }
+.p-16 { padding: 4rem; }
+
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mb-12 { margin-bottom: 3rem; }
+
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-6 { margin-top: 1.5rem; }
+.mt-8 { margin-top: 2rem; }
+.mt-12 { margin-top: 3rem; }
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-display);
+  line-height: 1.2;
+  margin: 0;
+}
+
+h1 { font-size: 3rem; }
+h2 { font-size: 2.25rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+
+.text-6xl { font-size: 3.75rem; }
+.text-5xl { font-size: 3rem; }
+.text-4xl { font-size: 2.25rem; }
+.text-3xl { font-size: 1.875rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-xl { font-size: 1.25rem; }
+.text-lg { font-size: 1.125rem; }
+.text-base { font-size: 1rem; }
+.text-sm { font-size: 0.875rem; }
+.text-xs { font-size: 0.75rem; }
+
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+.font-normal { font-weight: 400; }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.opacity-90 { opacity: 0.9; }
+.opacity-80 { opacity: 0.8; }
+.opacity-70 { opacity: 0.7; }
+.opacity-60 { opacity: 0.6; }
+
+/* Lists */
+ul, ol {
+  margin-left: 2rem;
+  line-height: 1.8;
+}
+
+ul li { list-style: disc; }
+ol li { list-style: decimal; }
+
+li { margin-bottom: 0.75rem; }
+li:last-child { margin-bottom: 0; }
+
+/* Card Styles */
+.card-rect {
+  padding: 2rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.2);
+}
+
+th {
+  font-weight: 600;
+}
+
+.checkmark {
+  color: #38bdf8;
+  font-weight: bold;
+}
+</style>
+</head>
+<body class="theme-dark">
+
+<!-- Slide 1: Title -->
+<section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+  <h1 class="text-6xl mb-6" style="color: #38bdf8;">The Structural Trust Framework</h1>
+  <p class="text-2xl mb-8" style="color: #cbd5e1;">Making AI Systems Trustworthy by Design</p>
+  <p class="text-base" style="color: #94a3b8;">Version 0.06 | March 2026</p>
+</section>
+
+<!-- Slide 2: The Governance Gap -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">The Governance Gap</h2>
+  <div class="fill-height col gap-lg">
+    <p class="text-lg" style="color: #cbd5e1;">Every major organisation deploying AI has ethics principles, compliance checklists, and responsible AI commitments...</p>
+    <p class="text-lg" style="color: #f59e0b;">...yet AI systems continue to produce harmful, indefensible, or simply wrong outcomes.</p>
+    <div style="background-color: #1e293b; padding: 1.5rem; margin-top: 1rem;">
+      <p class="text-xl" style="color: #38bdf8;">The Failure Pattern:</p>
+      <p class="text-lg mt-4" style="color: #cbd5e1;">Policies say what <em>should</em> happen.<br>Architecture determines what <em>does</em> happen.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 3: When Governance Fails -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">When Governance Fails</h2>
+  <div class="fill-height col gap-md">
+    <p class="text-xl font-semibold" style="color: #cbd5e1;">Boeing 737 MAX</p>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <p class="text-lg mb-4" style="color: #cbd5e1;"><span class="checkmark">✓</span> Safety certification</p>
+      <p class="text-lg mb-4" style="color: #cbd5e1;"><span class="checkmark">✓</span> Pilot training requirements</p>
+      <p class="text-lg mb-4" style="color: #cbd5e1;"><span class="checkmark">✓</span> Regulatory approval</p>
+      <p class="text-xl font-bold mt-6" style="color: #ef4444;">346 deaths</p>
+    </div>
+    <p class="text-lg mt-4" style="color: #94a3b8;">Declarative controls yield under pressure. Only structural constraints scale.</p>
+  </div>
+</section>
+
+<!-- Slide 4: Why AI Makes This Urgent -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">Why AI Makes This Urgent</h2>
+  <div class="fill-height col gap-md">
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.25rem;">EU AI Act Enforcement (2026)</h3>
+      <p class="text-base" style="color: #cbd5e1;">Stakeholder-legible explanation now mandatory for high-risk AI systems</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.25rem;">Australia APS Requirements (June 2026)</h3>
+      <p class="text-base" style="color: #cbd5e1;">AI Impact Assessments and structural accountability across public service</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.25rem;">Multi-Agent Proliferation</h3>
+      <p class="text-base" style="color: #cbd5e1;">Autonomous coordination creating accountability gaps declarative governance cannot bridge</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 5: The Architecture Problem -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">The Architecture Problem</h2>
+  <div class="fill-height col gap-lg">
+    <div>
+      <h3 class="mb-4" style="color: #cbd5e1; font-size: 1.5rem;">Current Approach</h3>
+      <p class="text-lg" style="color: #94a3b8;">Documentation solution to an architecture problem</p>
+    </div>
+    <div>
+      <h3 class="mb-4" style="color: #cbd5e1; font-size: 1.5rem;">Consequences</h3>
+      <ul class="text-base" style="color: #cbd5e1;">
+        <li>Continuous human effort required</li>
+        <li>Doesn't scale beyond small teams</li>
+        <li>Fails under adversarial conditions</li>
+      </ul>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem; margin-top: 1rem;">
+      <p class="text-lg" style="color: #38bdf8;">The Gap: Frameworks describe <em>what</em> trustworthy AI requires. None specify <em>how</em> to build it structurally.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 6: The Core Distinction -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">The Core Distinction</h2>
+  <div class="fill-height row gap-xl">
+    <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #ef4444; font-size: 1.5rem;">Declarative</h3>
+      <p class="text-base mb-4" style="color: #cbd5e1;">Write policies, appoint officers, train staff</p>
+      <p class="text-base font-semibold" style="color: #94a3b8;">Fails at scale</p>
+    </div>
+    <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #10b981; font-size: 1.5rem;">Structural</h3>
+      <p class="text-base mb-4" style="color: #cbd5e1;">Encode constraints in architecture</p>
+      <p class="text-base font-semibold" style="color: #38bdf8;">Scales without proportional oversight</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 7: Structural Ethics -->
+<section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+  <h2 class="mb-8" style="color: #38bdf8;">Structural Ethics</h2>
+  <div class="col gap-lg">
+    <p class="text-xl" style="color: #cbd5e1;">An actor without required capability → <strong style="color: #ef4444;">cannot perform action</strong></p>
+    <p class="text-xl" style="color: #cbd5e1;">An output without verified evidence → <strong style="color: #ef4444;">cannot be accepted</strong></p>
+    <p class="text-xl" style="color: #cbd5e1;">A decision without independent review → <strong style="color: #ef4444;">cannot proceed</strong></p>
+    <p class="text-lg mt-8" style="color: #94a3b8; font-style: italic;">The system is trustworthy because of how it was built, not what its builders intended.</p>
+  </div>
+</section>
+
+<!-- Slide 8: What the Framework Does -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">What the Framework Does</h2>
+  <div class="fill-height col gap-md">
+    <p class="text-lg mb-4" style="color: #cbd5e1;">Governs coordination of humans + AI agents in knowledge work</p>
+    <div class="row gap-md">
+      <div class="fill-width" style="background-color: #1e293b; padding: 1rem; text-align: center;">
+        <p class="font-bold mb-2" style="color: #38bdf8;">Purpose (4)</p>
+      </div>
+      <div class="fill-width" style="background-color: #1e293b; padding: 1rem; text-align: center;">
+        <p class="font-bold mb-2" style="color: #38bdf8;">Trust (7)</p>
+      </div>
+      <div class="fill-width" style="background-color: #1e293b; padding: 1rem; text-align: center;">
+        <p class="font-bold mb-2" style="color: #38bdf8;">Performance (5)</p>
+      </div>
+    </div>
+    <div class="row gap-md">
+      <div class="fill-width" style="background-color: #1e293b; padding: 1rem; text-align: center;">
+        <p class="font-bold mb-2" style="color: #38bdf8;">Learning (6)</p>
+      </div>
+      <div class="fill-width" style="background-color: #1e293b; padding: 1rem; text-align: center;">
+        <p class="font-bold mb-2" style="color: #38bdf8;">Accountability (2)</p>
+      </div>
+    </div>
+    <div style="background-color: #334155; padding: 1.5rem; margin-top: 1rem;">
+      <p class="text-lg font-semibold" style="color: #38bdf8;">+ Proof of Value Layer (emergent)</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 9: Trust Principles -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">Trust Principles (Sample)</h2>
+  <div class="fill-height col gap-md">
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">T1: Verification Precedes Trust</h3>
+      <p class="text-base" style="color: #cbd5e1;">No output accepted on assertion. Independent verification required.</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">T2: Proof Is the Product</h3>
+      <p class="text-base" style="color: #cbd5e1;">Structured evidence that work meets specification, not just the work itself.</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">T4: All Actions Witnessed</h3>
+      <p class="text-base" style="color: #cbd5e1;">Every action recorded in immutable audit log.</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">T5: No Self-Judgment</h3>
+      <p class="text-base" style="color: #cbd5e1;">Executor cannot be verifier. Structural independence enforced.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 10: Human-Agent Complementarity -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">Human-Agent Complementarity</h2>
+  <div class="fill-height row gap-xl">
+    <div class="fill-width col gap-md">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.5rem;">AI Does</h3>
+      <ul class="text-base" style="color: #cbd5e1;">
+        <li>Consistency at scale</li>
+        <li>Perfect recall</li>
+        <li>Parallelism</li>
+        <li>Near-zero marginal cost</li>
+      </ul>
+    </div>
+    <div class="fill-width col gap-md">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.5rem;">Humans Do</h3>
+      <ul class="text-base" style="color: #cbd5e1;">
+        <li>Ethical judgment</li>
+        <li>Irreversible decisions</li>
+        <li>Creative framing</li>
+        <li>Contextual wisdom</li>
+      </ul>
+    </div>
+  </div>
+  <p class="text-base mt-6" style="color: #94a3b8; text-align: center;">Architecture enforces boundaries (not policy)</p>
+</section>
+
+<!-- Slide 11: Conformance Profiles -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">Conformance Profiles</h2>
+  <div class="fill-height col gap-md">
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">Core Trust</h3>
+      <p class="text-base" style="color: #cbd5e1;">Minimum viable trustworthiness for any AI-assisted work</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">Full Lifecycle</h3>
+      <p class="text-base" style="color: #cbd5e1;">Adds cognitive diversity, validation, fairness, and explanation</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">High-Stakes / Regulated</h3>
+      <p class="text-base" style="color: #cbd5e1;">Adds quorum verification, full external legibility</p>
+    </div>
+    <div style="background-color: #334155; padding: 1.5rem;">
+      <h3 class="mb-3" style="color: #38bdf8; font-size: 1.25rem;">Blockchain Trust Layer</h3>
+      <p class="text-base" style="color: #cbd5e1;">Cryptographic portability across organizational boundaries</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 12: Proof of Value Layer -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">The Proof of Value Layer</h2>
+  <div class="fill-height col gap-md">
+    <p class="text-lg mb-4" style="color: #cbd5e1;">Not a new principle — emergent from <strong style="color: #38bdf8;">T2 + T4 + L3</strong></p>
+    <div style="background-color: #1e293b; padding: 1.5rem;">
+      <p class="text-xl font-semibold mb-4" style="color: #38bdf8;">The Thesis:</p>
+      <p class="text-lg" style="color: #cbd5e1;">"A framework built on structural evidence shouldn't ask you to trust its claims. It should prove them."</p>
+    </div>
+    <div class="row gap-md mt-4">
+      <div class="fill-width" style="background-color: #1e293b; padding: 1rem;">
+        <p class="text-base font-semibold mb-2" style="color: #38bdf8;">Cross-Sector Signals</p>
+        <p class="text-sm" style="color: #cbd5e1;">Cycle time, dispute rate, rework rate, collaboration volume</p>
+      </div>
+      <div class="fill-width" style="background-color: #1e293b; padding: 1rem;">
+        <p class="text-base font-semibold mb-2" style="color: #38bdf8;">Domain Add-Ons</p>
+        <p class="text-sm" style="color: #cbd5e1;">Legal, finance, healthcare, DAO-specific metrics</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 13: AI + Blockchain -->
+<section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+  <h2 class="mb-8" style="color: #38bdf8;">AI + Blockchain: Complementary Layers</h2>
+  <div class="col gap-xl">
+    <div style="background-color: #1e293b; padding: 2rem; width: 700px;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.5rem;">AI: Trust Generation Engine</h3>
+      <p class="text-lg" style="color: #cbd5e1;">Verification at scale, near-zero marginal cost, perfect recall</p>
+    </div>
+    <p class="text-2xl font-bold" style="color: #38bdf8;">↓</p>
+    <div style="background-color: #1e293b; padding: 2rem; width: 700px;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.5rem;">Blockchain: Trust Portability Layer</h3>
+      <p class="text-lg" style="color: #cbd5e1;">Independent verification across organizational boundaries</p>
+    </div>
+    <p class="text-base mt-6" style="color: #94a3b8; font-style: italic;">AI earns the trust → Blockchain ports it</p>
+  </div>
+</section>
+
+<!-- Slide 14: What Makes This Different -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">What Makes This Different</h2>
+  <table class="fill-height" style="color: #cbd5e1;">
+    <thead>
+      <tr style="border-bottom: 2px solid #38bdf8;">
+        <th style="color: #38bdf8; font-size: 1.125rem;">Other Frameworks</th>
+        <th style="color: #38bdf8; font-size: 1.125rem;">Structural Trust Framework</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Describe what trustworthy AI requires</td>
+        <td style="color: #10b981;">Specifies how to build it structurally</td>
+      </tr>
+      <tr>
+        <td>Properties to achieve</td>
+        <td style="color: #10b981;">Architecture that enforces them</td>
+      </tr>
+      <tr>
+        <td>Continuous compliance effort</td>
+        <td style="color: #10b981;">Scales without proportional oversight</td>
+      </tr>
+      <tr>
+        <td>Ask you to trust their claims</td>
+        <td style="color: #10b981;">Produces proof of effectiveness</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Slide 15: Domain Agnostic -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-6" style="color: #38bdf8;">Domain-Agnostic, Scale-Agnostic, Actor-Agnostic</h2>
+  <div class="fill-height col gap-md">
+    <div>
+      <h3 class="mb-3" style="color: #cbd5e1; font-size: 1.25rem;">Applicable Domains</h3>
+      <p class="text-base" style="color: #94a3b8;">Legal, financial, clinical, government, software, research — any verifiable knowledge work</p>
+    </div>
+    <div>
+      <h3 class="mb-3" style="color: #cbd5e1; font-size: 1.25rem;">Scale</h3>
+      <p class="text-base" style="color: #94a3b8;">Solo practitioner → Enterprise → DAO networks (thousands of parallel workstreams)</p>
+    </div>
+    <div>
+      <h3 class="mb-3" style="color: #cbd5e1; font-size: 1.25rem;">Implementation Substrate</h3>
+      <p class="text-base" style="color: #94a3b8;">ONE ontology: Groups, Actors, Things, Connections, Events, Knowledge</p>
+    </div>
+    <div style="background-color: #1e293b; padding: 1.5rem; margin-top: 1rem;">
+      <p class="text-lg" style="color: #38bdf8;"><strong>$10B</strong> responsible AI market by 2030 — this defines the architecture layer beneath them</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 16: The Promise -->
+<section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+  <div class="col gap-lg">
+    <h2 class="text-5xl mb-8" style="color: #38bdf8;">The Promise</h2>
+    <p class="text-2xl" style="color: #cbd5e1; line-height: 1.6;">Other frameworks tell you what trustworthy AI requires.</p>
+    <p class="text-2xl font-bold mt-6" style="color: #38bdf8; line-height: 1.6;">This one makes untrustworthy AI architecturally impossible — and proves it.</p>
+  </div>
+</section>
+
+<!-- Slide 17: Who This Is For -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-8" style="color: #38bdf8;">Who This Is For</h2>
+  <div class="fill-height row gap-lg">
+    <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.5rem;">Builders</h3>
+      <p class="text-base" style="color: #cbd5e1;">How do I design systems that are trustworthy by construction?</p>
+    </div>
+    <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.5rem;">Leaders</h3>
+      <p class="text-base" style="color: #cbd5e1;">How do I know our systems work as our policies intend?</p>
+    </div>
+    <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.5rem;">Affected Parties</h3>
+      <p class="text-base" style="color: #cbd5e1;">Why was this decision made about me, and what can I do?</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 18: Next Steps -->
+<section class="slide p-16 col center" style="background-color: #0f172a; color: #f1f5f9;">
+  <h2 class="mb-8" style="color: #38bdf8;">Next Steps</h2>
+  <div class="col gap-lg">
+    <div style="background-color: #1e293b; padding: 2rem; width: 700px;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.25rem;">Access Framework Resources</h3>
+      <ul class="text-base" style="color: #cbd5e1;">
+        <li>Conformance profiles and domain adaptation guides</li>
+        <li>ONE ontology implementation specifications</li>
+        <li>Proof template libraries by domain</li>
+        <li>Domain signal registries</li>
+      </ul>
+    </div>
+    <div style="background-color: #1e293b; padding: 2rem; width: 700px;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 1.25rem;">Get Involved</h3>
+      <p class="text-base" style="color: #cbd5e1;">Practitioner credentials, workshop programs, and advisory services available through the framework community</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

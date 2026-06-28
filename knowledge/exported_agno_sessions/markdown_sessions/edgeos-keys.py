@@ -1,0 +1,6 @@
+# Keys
+
+export OLLAMA_API_KEY="0d57831a414f4a17b2bdad22ca5acd45.ofBBoQ05Zp-9IW5DXZk57EpS" OPENAI_API_KEY="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" EXA_API_KEY=d1301ad0-767a-49f3-a202-dbba948567d5 LINKUP_API_KEY=ae29c253-db93-4fdc-98f2-189f5fe54169 TAVILY_API_KEY=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 SERPER_API_KEY=3fff0fcf52ca272e9e2c2560bf3ffdb7e7dcc359
+
+
+postgresql://neondb_owner:npg_Ca3AwXlG0oVW@ep-bold-math-amrjymkn-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require

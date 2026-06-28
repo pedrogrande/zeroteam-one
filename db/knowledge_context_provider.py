@@ -190,7 +190,7 @@ class KnowledgeContextProvider(ContextProvider):
             """
             import json
 
-            from agno.context.provider import _serialize_answer
+            from agno.context.provider import serialize_answer
 
             try:
                 # If the model passed an explicit scope, prefix it so
@@ -203,7 +203,7 @@ class KnowledgeContextProvider(ContextProvider):
                 )
             except Exception as exc:
                 return json.dumps({"error": f"{type(exc).__name__}: {exc}"})
-            return json.dumps(_serialize_answer(answer))
+            return json.dumps(serialize_answer(answer))
 
         return _query
 
