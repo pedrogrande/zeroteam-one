@@ -67,12 +67,15 @@ from agno.learn import (
     SessionContextConfig,
 )
 from agno.learn.schemas import UserProfile
+from agno.models.openai import OpenAIChat
+from agno.session import SessionSummaryManager
 from agno.tools.parallel import ParallelTools
 
 from app.settings import default_model
 from db import get_postgres_db
 from db.knowledge_context_provider import KnowledgeContextProvider
 from db.knowledge_bases import STUDIO_KNOWLEDGE_BASES_BY_TABLE
+from db.session import get_reranker
 from prompts.thinking_partner_instructions import (
     INSTRUCTIONS,
     EXPECTED_OUTPUT,
@@ -212,6 +215,15 @@ def create_thinking_partner(
     db = get_postgres_db()
     model = default_model()
 
+    # Session summary model — Ollama doesn't support structured outputs,
+    # so the glm model returns empty content when asked for JSON conforming
+    # to a schema, causing "Failed to parse session summary response"
+    # warnings on every run. Use OpenAI (which reliably supports native
+    # structured outputs) for the summary manager instead.
+    # The OPENAI_API_KEY is already set for embeddings.
+    # Source: https://docs.agno.com/input-output/output-model
+    summary_model = OpenAIChat(id="gpt-4o-mini")
+
     # Knowledge — two distinct concerns:
     #
     # 1. learning_sink — "User Profile Information" KB. Passed to
@@ -229,7 +241,11 @@ def create_thinking_partner(
     # KnowledgeProtocol path entirely (no implicit
     # search_knowledge_base tool, no build_context injection).
     learning_sink = STUDIO_KNOWLEDGE_BASES_BY_TABLE[KNOWLEDGE_BASE_KEY]
-    knowledge_provider = KnowledgeContextProvider()
+    # Reranker — opt-in via CO_API_KEY. When unset, get_reranker() returns
+    # None and retrieval works exactly as before (no reranking). When set,
+    # a CohereReranker reranks the merged candidate pool at the composite
+    # level — 1 API call per query_knowledge invocation, not 1 per KB.
+    knowledge_provider = KnowledgeContextProvider(reranker=get_reranker())
 
     # LearningMachine — 5 stores, each mapped to a ThinkingPartner
     # capability:
@@ -371,6 +387,9 @@ def create_thinking_partner(
         # Source: https://docs.agno.com/reference/agents/agent (line 25)
         enable_session_summaries=True,
         add_session_summary_to_context=True,
+        # Session summary manager — uses OpenAI for reliable structured
+        # output (Ollama doesn't support structured outputs).
+        session_summary_manager=SessionSummaryManager(model=summary_model),
         # --- Compression ---
         # Tool results (web search, knowledge search) can be verbose.
         # Compression summarises results after a threshold, reducing

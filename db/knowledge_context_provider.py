@@ -33,6 +33,7 @@ Usage
 from typing import List, Optional
 
 from agno.context.provider import Answer, ContextProvider, Document, Status
+from agno.knowledge.reranker.base import Reranker
 from agno.run import RunContext
 from agno.tools import tool
 
@@ -67,6 +68,7 @@ class KnowledgeContextProvider(ContextProvider):
         self,
         knowledge_bases: Optional[List[Knowledge]] = None,
         per_kb_limit: int = 3,
+        reranker: Optional[Reranker] = None,
     ) -> None:
         super().__init__(
             id="knowledge",
@@ -80,6 +82,7 @@ class KnowledgeContextProvider(ContextProvider):
         self._composite = CompositeKnowledge(
             knowledge_bases=bases,
             per_kb_limit=per_kb_limit,
+            reranker=reranker,
         )
         # Build a table_name → Knowledge map for scoped queries.
         self._kb_by_table: dict[str, Knowledge] = {
@@ -133,8 +136,7 @@ class KnowledgeContextProvider(ContextProvider):
         lines = [
             "<knowledge_provider>",
             "You have access to a knowledge base via the `query_knowledge` tool.",
-            "Search before answering questions that may touch prior context — "
-            "don't assume you know the answer.",
+            "Search before answering questions that may touch prior context — don't assume you know the answer.",
             "",
             "## Usage",
             "",
@@ -221,9 +223,10 @@ class KnowledgeContextProvider(ContextProvider):
             table = SCOPE_ALIASES[scope]
             kb = self._kb_by_table.get(table)
             if kb:
-                return kb.search(
+                docs = kb.search(
                     query=question, max_results=self._composite.per_kb_limit
                 )
+                return self._composite._maybe_rerank(question, docs)
             return []
         return self._composite.retrieve(query=question)
 
@@ -237,9 +240,10 @@ class KnowledgeContextProvider(ContextProvider):
             table = SCOPE_ALIASES[scope]
             kb = self._kb_by_table.get(table)
             if kb:
-                return await kb.asearch(
+                docs = await kb.asearch(
                     query=question, max_results=self._composite.per_kb_limit
                 )
+                return self._composite._maybe_rerank(question, docs)
             return []
         return await self._composite.aretrieve(query=question)
 

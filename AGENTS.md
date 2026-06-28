@@ -144,6 +144,12 @@ my_kb = create_knowledge("My Knowledge", "my_vectors")
 
 Knowledge bases use PgVector with `SearchType.hybrid` and `text-embedding-3-small`. Document contents go into `<table_name>_contents`.
 
+### Reranking
+
+Reranking is opt-in via `CO_API_KEY`. When set, a `CohereReranker` reranks the merged candidate pool at the `CompositeKnowledge` level — **1 API call per `query_knowledge` invocation**, not 1 per KB. This keeps the Cohere trial plan's 10 rerank/min limit viable for a single-user system. When unset, retrieval works as before (no reranking). Rate-limit errors degrade gracefully — `CohereReranker.rerank()` catches exceptions and returns unranked docs.
+
+The reranker is constructed in [`db/session.py`](db/session.py) (`get_reranker()`) and wired through `KnowledgeContextProvider` → `CompositeKnowledge`. It is NOT attached to individual `PgVector` instances — that would multiply rerank calls by the number of KBs (7× for unscoped queries). See [Agno reranking docs](https://docs.agno.com/knowledge/concepts/search-and-retrieval/agentic-rag) for the underlying pattern.
+
 ### Studio Knowledge Bases
 
 Five domain knowledge bases are registered with the AgentOS Studio Registry so they're selectable when building agents, teams, and workflows in Studio. They live in [`db/knowledge_bases.py`](db/knowledge_bases.py) and are wired in via `AgentOS(knowledge=STUDIO_KNOWLEDGE_BASES)` in [`app/main.py`](app/main.py).
@@ -230,6 +236,9 @@ Run [`docs/review-and-improve.md`](docs/review-and-improve.md). A recurring swee
 | `AGENT_MODEL_ID` | no | `glm-5.2:cloud` | Model ID for `default_model()`. |
 | `EMBEDDER_MODEL_ID` | no | `text-embedding-3-small` | OpenAI embedder model for Knowledge bases. |
 | `AGNO_TRACING` | no | `false` | If `true`, enables AgentOS tracing (needs an exporter to be useful). |
+| `CO_API_KEY` | no | — | Cohere API key for knowledge reranking. Unset → no reranking. |
+| `RERANKER_MODEL_ID` | no | `rerank-v3.5` | Cohere reranker model ID. |
+| `RERANK_TOP_N` | no | `5` | Number of results to return after reranking. |
 
 ## Ports
 

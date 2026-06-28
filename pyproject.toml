@@ -9,12 +9,15 @@ authors = [{ name = "Agno", email = "hello@agno.com" }]
 
 dependencies = [
   "agno[os,slack]",
+  "beautifulsoup4",
+  "cohere",
   "fastapi[standard]",
   "mcp",
   "ollama",
   "openai",
   "parallel-web",
   "pgvector",
+  "python-docx",
   "redis",
   "psycopg[binary]",
   "pypdf",

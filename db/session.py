@@ -16,6 +16,7 @@ from agno.knowledge import Knowledge
 from agno.knowledge.chunking.agentic import AgenticChunking
 from agno.knowledge.embedder.openai import OpenAIEmbedder
 from agno.knowledge.reader.pdf_reader import PDFReader
+from agno.knowledge.reranker.base import Reranker
 from agno.vectordb.pgvector import PgVector, SearchType
 
 from db.url import get_db_url
@@ -113,3 +114,49 @@ def create_studio_knowledge(
         chunking_strategy=AgenticChunking(),
     )
     return knowledge
+
+
+# ---------------------------------------------------------------------------
+# Reranker
+# ---------------------------------------------------------------------------
+# Cohere reranker for composite-level reranking. Opt-in via ``CO_API_KEY``.
+# When unset, ``get_reranker()`` returns ``None`` and the retrieval pipeline
+# behaves exactly as before (no reranking).
+#
+# The reranker is attached at the ``CompositeKnowledge`` level — NOT on each
+# ``PgVector`` instance. This is deliberate: the ``KnowledgeContextProvider``
+# fans out across 7 Studio KBs per unscoped ``query_knowledge`` call. With a
+# per-KB reranker that would be 7 Cohere API calls per query; at the composite
+# level it is 1 call on the merged candidate pool. This keeps the Cohere trial
+# plan's 10 rerank/min limit viable for a single-user system.
+#
+# ``CohereReranker.rerank()`` already catches all exceptions and returns the
+# original unranked documents on failure (rate limit, network, etc.), so
+# rate-limit errors degrade gracefully — the agent gets unranked results
+# instead of crashing.
+#
+# Env vars:
+# - ``CO_API_KEY``        — Cohere API key. Unset → no reranking.
+# - ``RERANKER_MODEL_ID`` — Cohere model (default ``rerank-v3.5``).
+# - ``RERANK_TOP_N``      — Results to return after reranking (default 5).
+#
+# Source: https://docs.agno.com/knowledge/concepts/search-and-retrieval/agentic-rag
+
+
+def get_reranker() -> Optional[Reranker]:
+    """Build a Cohere reranker from env vars. Returns ``None`` if ``CO_API_KEY`` is unset.
+
+    Reranking is opt-in: when ``CO_API_KEY`` is not set, the retrieval
+    pipeline works exactly as before (no reranking, no Cohere dependency
+    exercised). When set, a :class:`CohereReranker` is returned for use at
+    the :class:`CompositeKnowledge` level.
+    """
+    api_key = getenv("CO_API_KEY")
+    if not api_key:
+        return None
+
+    from agno.knowledge.reranker.cohere import CohereReranker
+
+    model = getenv("RERANKER_MODEL_ID", "rerank-v3.5")
+    top_n = int(getenv("RERANK_TOP_N", "5"))
+    return CohereReranker(model=model, api_key=api_key, top_n=top_n)
